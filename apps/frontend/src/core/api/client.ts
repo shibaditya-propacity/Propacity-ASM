@@ -29,7 +29,7 @@ async function request<T>(
     method,
     headers: {
       "Content-Type": "application/json",
-      // Auth header injected here in production
+      "Authorization": "Bearer dev-stub-token",
     },
     ...(opts.body !== undefined && { body: JSON.stringify(opts.body) }),
   });

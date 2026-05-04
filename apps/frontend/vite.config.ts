@@ -7,6 +7,16 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@asm/schemas": path.resolve(__dirname, "../../packages/schemas/src/index.ts"),
+    },
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: [],
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+      "@asm/schemas": path.resolve(__dirname, "../../packages/schemas/src/index.ts"),
     },
   },
 });
