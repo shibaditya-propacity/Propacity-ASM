@@ -1,4 +1,4 @@
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
 interface TopbarProps {
@@ -20,10 +20,6 @@ export function Topbar({ title, subtitle, actions }: TopbarProps) {
         <kbd className="text-[10px] font-mono border border-slate-200 rounded px-1 py-0.5 bg-white">⌘K</kbd>
       </button>
       {actions}
-      <button className="hidden md:inline-flex items-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium text-white bg-gradient-to-br from-violet-600 to-brand-600 hover:from-violet-700 hover:to-brand-700">
-        <Sparkles className="w-3.5 h-3.5" />
-        Copilot
-      </button>
     </header>
   );
 }
