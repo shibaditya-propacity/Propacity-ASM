@@ -1,0 +1,37 @@
+{
+  "name": "@asm/backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@asm/schemas": "workspace:*",
+    "@prisma/client": "^5.14.0",
+    "argon2": "^0.31.2",
+    "bullmq": "^5.7.0",
+    "date-fns": "^3.6.0",
+    "express": "^4.19.0",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.2.0",
+    "pino-http": "^10.2.0",
+    "zod": "^3.23.0",
+    "@cuid/cuid2": "^2.2.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.6",
+    "@types/node": "^20.14.0",
+    "prisma": "^5.14.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "supertest": "^7.0.0",
+    "@types/supertest": "^6.0.2"
+  }
+}

@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================
+// CORE — tenants, users, sessions, audit
+// =============================================================
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  workshops        GrowthWorkshop[]
+  prospects        GrowthProspect[]
+  brandAudits      GrowthBrandAudit[]
+  prospectActivities GrowthProspectActivity[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email     String   @unique
+  name      String
+  role      String   @default("agency_member")
+  passwordHash String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("users")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  actorId      String
+  action       String
+  resourceType String
+  resourceId   String
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, resourceType, resourceId])
+  @@map("audit_logs")
+}
+
+// =============================================================
+// MODULE: GROWTH
+// =============================================================
+
+model GrowthWorkshop {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  format           String   // 'Online' | 'In-person'
+  city             String?
+  venue            String?
+  date             String   // ISO date string YYYY-MM-DD
+  time             String?
+  capacity         Int
+  ticketPrice      Int      @default(0)
+  registered       Int      @default(0)
+  attended         Int      @default(0)
+  adSpend          Int      @default(0)
+  cpRegistration   Int      @default(0)
+  speaker          String?
+  registrationLink String?
+  tags             String?
+  notes            String?
+  audienceSegment  String?
+  campaignBudget   Int      @default(0)
+  expectedCPR      Int      @default(0)
+  status           String   @default("Upcoming") // WorkshopStatus
+  deletedAt        DateTime?
+  deletedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  prospects GrowthProspect[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@map("growth_workshops")
+}
+
+model GrowthProspect {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  workshopId       String
+  workshop         GrowthWorkshop @relation(fields: [workshopId], references: [id], onDelete: Cascade)
+  name             String
+  designation      String?
+  company          String
+  city             String?
+  scale            String?  // 'Small' | 'Mid' | 'Large'
+  phone            String?
+  email            String?
+  source           String?
+  classification   String?  // ProspectClassification
+  stage            String   @default("Registered") // ProspectStage
+  fitScore         Int?
+  estimatedDealSize Int?
+  attended         Boolean  @default(false)
+  registeredAt     DateTime @default(now())
+  oneOnOneAt       String?
+  notes            String?
+  lastActivity     DateTime @default(now())
+  ownerPm          String?
+  hasAudit         Boolean  @default(false)
+  hasProposal      Boolean  @default(false)
+  deletedAt        DateTime?
+  deletedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  activities GrowthProspectActivity[]
+  brandAudits GrowthBrandAudit[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, stage])
+  @@index([tenantId, workshopId])
+  @@map("growth_prospects")
+}
+
+model GrowthProspectActivity {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  prospectId  String
+  prospect    GrowthProspect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  actorId     String
+  type        String   // 'stage_change' | 'note' | 'call' | 'email' | 'meeting'
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, prospectId, createdAt])
+  @@map("growth_prospect_activities")
+}
+
+model GrowthBrandAudit {
+  id                          String   @id @default(cuid())
+  tenantId                    String
+  tenant                      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  prospectId                  String
+  prospect                    GrowthProspect @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  type                        String   @default("Brand Positioning") // AuditType
+  status                      String   @default("Pending") // AuditStatus
+  generatedAt                 DateTime?
+  generatedBy                 String?
+  overallScore                Int?
+  dimensions                  Json     @default("[]")
+  benchmarks                  Json     @default("[]")
+  topThreeOpportunities       Json     @default("[]")
+  estimatedAnnualUpliftLeads  Int?
+  estimatedAnnualUpliftRevenue BigInt?
+  competitorsAnalysed         Json     @default("[]")
+  dataSources                 Json     @default("[]")
+  notes                       String?
+  deletedAt                   DateTime?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, prospectId])
+  @@index([tenantId, status])
+  @@map("growth_brand_audits")
+}
