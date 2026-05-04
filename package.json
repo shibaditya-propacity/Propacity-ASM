@@ -1,6 +1,7 @@
 {
   "name": "propacity-asm",
   "private": true,
+  "type": "module",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -9,12 +10,34 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "test": "turbo test"
+    "test": "turbo test",
+    "ci": "pnpm lint && pnpm --filter @asm/frontend exec tsc --noEmit && pnpm --filter @asm/backend exec tsc --noEmit && pnpm test && pnpm build",
+    "health": "node scripts/validate-env.js",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "**/*.{ts,tsx,js,cjs,mjs,json,md,yml,yaml,css}": [
+      "pnpm exec prettier --write"
+    ]
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "@prisma/engines", "argon2", "esbuild", "msgpackr-extract", "prisma"]
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "argon2",
+      "esbuild",
+      "msgpackr-extract",
+      "prisma"
+    ]
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.0.0",
+    "@commitlint/config-conventional": "^19.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.3.0",
     "turbo": "^2.0.0",
     "typescript": "^5.4.0"
   },

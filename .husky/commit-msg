@@ -1,0 +1,20 @@
+#!/bin/sh
+# .husky/commit-msg
+#
+# Validates commit message format with commitlint.
+# Rules are defined in commitlint.config.js at the repo root.
+#
+# Valid examples:
+#   feat(growth): add recharts pipeline bar chart
+#   fix(auth): prevent token refresh loop on 401
+#   ci: add github actions preview workflow
+#   chore: update pnpm lockfile
+#
+# Invalid examples (will block the commit):
+#   "update stuff"           ← no type prefix
+#   "Feat: Add thing"        ← capital letter in type
+#   "feat: Add thing."       ← subject starts with capital, ends with period
+#
+# See docs/ROOT_CLAUDE.md §7 for the full commit message policy.
+
+pnpm commitlint --edit "$1"

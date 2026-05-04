@@ -1,0 +1,212 @@
+# CI — runs on every push and pull_request targeting main or dev.
+# Five jobs run in parallel after install; build is gated on test passing.
+#
+# Secrets expected in GitHub repo settings (Settings → Secrets → Actions):
+#   None required for CI itself. CD secrets are documented in cd.yml.
+#
+# TODO: set PNPM_VERSION to match your packageManager field in root package.json.
+
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+# Cancel an in-progress run for the same ref when a newer one starts.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Keep Node and pnpm versions in one place — update here only.
+  NODE_VERSION: "20"
+  PNPM_VERSION: "10"
+
+jobs:
+  # ── 1. Lint ────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # --frozen-lockfile ensures CI never silently upgrades packages
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # turbo lint fans out to each workspace's lint script
+      - name: ESLint
+        run: pnpm lint
+
+      # TODO: add `"format:check": "prettier --check ."` to root package.json
+      # then uncomment the step below:
+      # - name: Prettier
+      #   run: pnpm format:check
+
+  # ── 2. Type-check ─────────────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Build shared schemas first so workspace imports resolve
+      - name: Build @asm/schemas
+        run: pnpm --filter @asm/schemas build
+
+      # Generate Prisma client types before type-checking backend
+      - name: Prisma generate (backend types)
+        run: pnpm --filter @asm/backend exec prisma generate
+        env:
+          # Prisma generate only needs a syntactically valid URL in CI
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+      - name: Type-check backend
+        run: pnpm --filter @asm/backend exec tsc --noEmit
+
+      - name: Type-check frontend
+        run: pnpm --filter @asm/frontend exec tsc --noEmit
+
+  # ── 3. Test ───────────────────────────────────────────────────────────────
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Schemas must be built before any test that imports @asm/schemas
+      - name: Build @asm/schemas
+        run: pnpm --filter @asm/schemas build
+
+      # Frontend unit tests (Vitest + Testing Library)
+      # workshop-form.test.tsx MUST pass — it is the growth-module smoke test
+      - name: Frontend tests
+        run: pnpm --filter @asm/frontend exec vitest run --coverage
+        env:
+          # Prevents Vite from opening a browser during tests
+          CI: "true"
+
+      # Backend tests (Vitest + supertest)
+      - name: Backend tests
+        run: pnpm --filter @asm/backend exec vitest run --coverage
+        env:
+          CI: "true"
+          # TODO: set up a test database via GitHub Actions service or use an in-memory mock
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+          JWT_SECRET: ci-test-secret-min-32-characters-long
+
+      # Upload coverage reports for both apps as a single artifact
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ github.sha }}
+          path: |
+            apps/frontend/coverage/
+            apps/backend/coverage/
+          retention-days: 14
+
+  # ── 4. Build ──────────────────────────────────────────────────────────────
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    # Only build after tests pass — no point building broken code
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+        env:
+          # Vite replaces VITE_* vars at build time — provide a placeholder so build doesn't fail
+          # TODO: replace with real staging/prod URL via GitHub Environment secret
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL || 'https://api.propacity-asm.com/api/v1' }}
+
+      # Upload dist artifacts so CD job can download them without rebuilding
+      - name: Upload frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: apps/frontend/dist/
+          retention-days: 7
+
+      - name: Upload backend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist-${{ github.sha }}
+          path: apps/backend/dist/
+          retention-days: 7
+
+  # ── 5. Security ───────────────────────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    # Run in parallel with other jobs — security issues are blocking
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fail CI on high or critical vulnerabilities in production deps only.
+      # --prod skips devDependencies (vitest, eslint, etc.) which are not shipped.
+      - name: Audit production dependencies
+        run: pnpm audit --audit-level high --prod
+        # TODO: if audit fails on a known false-positive, add it to .nsprc
+        # or use `pnpm audit --ignore-registry-errors` temporarily and file a ticket.
