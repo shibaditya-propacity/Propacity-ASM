@@ -5,17 +5,32 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans:    ['"DM Sans"', "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+        heading: ['"Sora"', '"DM Sans"', "ui-sans-serif", "sans-serif"],
       },
       colors: {
         brand: {
-          50: "#eef6ff",
-          100: "#d9eaff",
-          200: "#bbd9ff",
-          500: "#2563eb",
-          600: "#1d4ed8",
-          700: "#1e40af",
+          50:  "#eef0fe",
+          100: "#d9dcfd",
+          200: "#b3b9fb",
+          500: "#2D3FE7",
+          600: "#2233d0",
+          700: "#1a28a8",
         },
+      },
+      keyframes: {
+        "auth-in": {
+          "0%":   { opacity: "0", transform: "translateY(14px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "toast-in": {
+          "0%":   { opacity: "0", transform: "translateY(-12px) scale(0.96)" },
+          "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+        },
+      },
+      animation: {
+        "auth-in":  "auth-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "toast-in": "toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
       },
     },
   },

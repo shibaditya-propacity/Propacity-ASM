@@ -1,3 +1,5 @@
+import { getToken } from "@/core/auth/token";
+
 const BASE_URL = import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:3000/api/v1";
 
 export class ApiError extends Error {
@@ -29,7 +31,7 @@ async function request<T>(
     method,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": "Bearer dev-stub-token",
+      "Authorization": `Bearer ${getToken() ?? "dev-stub-token"}`,
     },
     ...(opts.body !== undefined && { body: JSON.stringify(opts.body) }),
   });

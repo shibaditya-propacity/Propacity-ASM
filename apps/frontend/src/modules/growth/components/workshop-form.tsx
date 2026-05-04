@@ -6,9 +6,11 @@ import type { CreateWorkshopInput } from "../types";
 
 interface WorkshopFormProps {
   onSuccess?: () => void;
+  /** When true, renders without the card wrapper (e.g. inside a modal). */
+  bare?: boolean;
 }
 
-export function WorkshopForm({ onSuccess }: WorkshopFormProps) {
+export function WorkshopForm({ onSuccess, bare }: WorkshopFormProps) {
   const { mutate, isPending, error } = useCreateWorkshop();
 
   const {
@@ -25,7 +27,7 @@ export function WorkshopForm({ onSuccess }: WorkshopFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="card card-pad space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className={bare ? "space-y-4" : "card card-pad space-y-4"}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
           <label className="block text-xs font-medium text-slate-700 mb-1">
