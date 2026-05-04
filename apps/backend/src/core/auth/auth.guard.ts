@@ -1,21 +1,48 @@
 import type { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
 import { AppError } from "@/core/errors/app-error";
 
-// Stub: in production this verifies the RS256 JWT and populates req.user
+const JWT_SECRET = process.env["JWT_SECRET"] ?? "dev-secret-key-not-for-production";
+
+interface JwtPayload {
+  sub:      string;
+  tenantId: string;
+  role:     string;
+}
+
 export function authGuard(req: Request, _res: Response, next: NextFunction): void {
-  // Stub implementation — replace with real JWT verification
-  if (!req.headers["authorization"]) {
+  const authHeader = req.headers["authorization"];
+
+  if (!authHeader?.startsWith("Bearer ")) {
     next(
       new AppError({
-        code: "AUTH_MISSING_TOKEN",
-        message: "No authorization header",
+        code:          "AUTH_MISSING_TOKEN",
+        message:       "No bearer token in Authorization header",
         publicMessage: "Authentication required.",
-        statusCode: 401,
+        statusCode:    401,
       })
     );
     return;
   }
-  // In production: verify JWT, load user, attach to req.user
-  req.user = { id: "stub-user-id", tenantId: "stub-tenant-id", permissions: ["growth.view"] };
-  next();
+
+  const token = authHeader.slice(7);
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    req.user = {
+      id:          payload.sub,
+      tenantId:    payload.tenantId,
+      permissions: [],           // extend with real RBAC when needed
+    };
+    next();
+  } catch {
+    next(
+      new AppError({
+        code:          "AUTH_INVALID_TOKEN",
+        message:       "JWT verification failed",
+        publicMessage: "Your session has expired. Please sign in again.",
+        statusCode:    401,
+      })
+    );
+  }
 }

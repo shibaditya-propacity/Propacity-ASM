@@ -13,18 +13,38 @@ html, body, #root {
 }
 
 body {
-  background-color: #f8fafc;
+  background-color: #F4F6FB;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Animations ──────────────────────────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease both;
+}
+
+/* ── Component classes ───────────────────────────────────────────────────────── */
 @layer components {
   .card        { @apply bg-white rounded-xl border border-slate-200 shadow-sm; }
   .card-pad    { @apply p-5; }
   .kpi-label   { @apply text-xs font-medium text-slate-500 uppercase tracking-wide; }
   .kpi-value   { @apply text-2xl font-semibold text-slate-900; }
   .chip        { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium; }
-  .btn         { @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 bg-white hover:bg-slate-50; }
+  .btn         { @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200 bg-white hover:bg-slate-50 transition-colors; }
   .btn-primary { @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-brand-500 text-white hover:bg-brand-600 transition-colors; }
   .th          { @apply text-left text-xs font-medium text-slate-500 uppercase tracking-wide px-3 py-2; }
   .td          { @apply px-3 py-2.5 text-sm text-slate-700 border-t border-slate-100; }
