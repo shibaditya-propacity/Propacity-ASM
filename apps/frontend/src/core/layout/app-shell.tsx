@@ -42,9 +42,8 @@ export function AppShell() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  // Only @propacity.in email addresses may schedule workshops.
-  // The backend enforces the same rule — this is a UI convenience, not the only gate.
-  const canScheduleWorkshop = user?.email?.endsWith("@propacity.in") ?? false;
+  // The backend enforces @propacity.in email gate on POST /workshops.
+  // The button is always visible — non-propacity users will see an error message on submit.
 
   function handleLogout() {
     logout();
@@ -80,29 +79,27 @@ export function AppShell() {
           </div>
         </div>
 
-        {/* Schedule CTA — visible only to @propacity.in users */}
-        {canScheduleWorkshop && (
-          <div className="p-3 border-b border-white/10 shrink-0">
-            <button
-              onClick={() => setWorkshopModalOpen(true)}
-              title={collapsed ? "Schedule a Workshop" : undefined}
-              className={`w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-all duration-[250ms] shadow-[0_0_18px_rgba(45,63,231,0.35)] hover:shadow-[0_0_24px_rgba(45,63,231,0.5)] ${
-                collapsed ? "h-9 px-0" : "h-9 px-3"
-              }`}
+        {/* Schedule CTA — always visible; backend enforces email permission */}
+        <div className="p-3 border-b border-white/10 shrink-0">
+          <button
+            onClick={() => setWorkshopModalOpen(true)}
+            title={collapsed ? "Schedule a Workshop" : undefined}
+            className={`w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-all duration-[250ms] shadow-[0_0_18px_rgba(45,63,231,0.35)] hover:shadow-[0_0_24px_rgba(45,63,231,0.5)] ${
+              collapsed ? "h-9 px-0" : "h-9 px-3"
+            }`}
+          >
+            <CalendarPlus className="w-4 h-4 shrink-0" />
+            <span
+              className="whitespace-nowrap overflow-hidden transition-all duration-[200ms]"
+              style={{
+                maxWidth: collapsed ? 0 : 160,
+                opacity: collapsed ? 0 : 1,
+              }}
             >
-              <CalendarPlus className="w-4 h-4 shrink-0" />
-              <span
-                className="whitespace-nowrap overflow-hidden transition-all duration-[200ms]"
-                style={{
-                  maxWidth: collapsed ? 0 : 160,
-                  opacity: collapsed ? 0 : 1,
-                }}
-              >
-                Schedule a Workshop
-              </span>
-            </button>
-          </div>
-        )}
+              Schedule a Workshop
+            </span>
+          </button>
+        </div>
 
         {/* Nav */}
         <nav
