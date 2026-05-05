@@ -10,8 +10,10 @@ export function useUpdateProspectStage(id: string) {
       apiClient.post<Prospect>(`/growth/prospects/${id}/stage`, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: growthKeys.prospect(id) });
-      queryClient.invalidateQueries({ queryKey: growthKeys.prospects() });
-      queryClient.invalidateQueries({ queryKey: growthKeys.prospectActivities(id) });
+      queryClient.invalidateQueries({ queryKey: growthKeys.prospectsList() });
+      queryClient.invalidateQueries({
+        queryKey: growthKeys.prospectActivities(id),
+      });
     },
   });
 }

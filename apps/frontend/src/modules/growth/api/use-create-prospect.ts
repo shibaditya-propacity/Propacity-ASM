@@ -9,7 +9,7 @@ export function useCreateProspect() {
     mutationFn: (input: CreateProspectInput) =>
       apiClient.post<Prospect>("/growth/prospects", input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: growthKeys.prospects() });
+      queryClient.invalidateQueries({ queryKey: growthKeys.prospectsList() });
     },
   });
 }

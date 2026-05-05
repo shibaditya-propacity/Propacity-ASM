@@ -10,7 +10,7 @@ export function useUpdateProspect(id: string) {
       apiClient.patch<Prospect>(`/growth/prospects/${id}`, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: growthKeys.prospect(id) });
-      queryClient.invalidateQueries({ queryKey: growthKeys.prospects() });
+      queryClient.invalidateQueries({ queryKey: growthKeys.prospectsList() });
     },
   });
 }
