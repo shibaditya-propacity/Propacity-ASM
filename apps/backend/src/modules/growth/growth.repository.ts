@@ -1,4 +1,5 @@
 import { prisma } from "@/core/prisma/client";
+import type { Prisma } from "@prisma/client";
 import type {
   CreateWorkshopInput,
   UpdateWorkshopInput,
@@ -43,6 +44,7 @@ function mapWorkshop(row: Record<string, unknown>): Workshop {
     campaignBudget: row["campaignBudget"] as number,
     expectedCPR: row["expectedCPR"] as number,
     status: row["status"] as Workshop["status"],
+    createdByName: (row["createdByName"] as string | null) ?? null,
     createdAt: (row["createdAt"] as Date).toISOString(),
     updatedAt: (row["updatedAt"] as Date).toISOString(),
   };
@@ -61,7 +63,8 @@ function mapProspect(row: Record<string, unknown>): Prospect {
     phone: (row["phone"] as string | null) ?? null,
     email: (row["email"] as string | null) ?? null,
     source: (row["source"] as string | null) ?? null,
-    classification: (row["classification"] as Prospect["classification"]) ?? null,
+    classification:
+      (row["classification"] as Prospect["classification"]) ?? null,
     stage: row["stage"] as Prospect["stage"],
     fitScore: (row["fitScore"] as number | null) ?? null,
     estimatedDealSize: (row["estimatedDealSize"] as number | null) ?? null,
@@ -85,13 +88,18 @@ function mapBrandAudit(row: Record<string, unknown>): BrandAudit {
     prospectId: row["prospectId"] as string,
     type: row["type"] as BrandAudit["type"],
     status: row["status"] as BrandAudit["status"],
-    generatedAt: row["generatedAt"] ? (row["generatedAt"] as Date).toISOString() : null,
+    generatedAt: row["generatedAt"]
+      ? (row["generatedAt"] as Date).toISOString()
+      : null,
     generatedBy: (row["generatedBy"] as string | null) ?? null,
     overallScore: (row["overallScore"] as number | null) ?? null,
     dimensions: (row["dimensions"] as BrandAudit["dimensions"]) ?? [],
     benchmarks: (row["benchmarks"] as BrandAudit["benchmarks"]) ?? [],
-    topThreeOpportunities: (row["topThreeOpportunities"] as BrandAudit["topThreeOpportunities"]) ?? [],
-    estimatedAnnualUpliftLeads: (row["estimatedAnnualUpliftLeads"] as number | null) ?? null,
+    topThreeOpportunities:
+      (row["topThreeOpportunities"] as BrandAudit["topThreeOpportunities"]) ??
+      [],
+    estimatedAnnualUpliftLeads:
+      (row["estimatedAnnualUpliftLeads"] as number | null) ?? null,
     estimatedAnnualUpliftRevenue: row["estimatedAnnualUpliftRevenue"]
       ? Number(row["estimatedAnnualUpliftRevenue"])
       : null,
@@ -108,12 +116,17 @@ function mapBrandAudit(row: Record<string, unknown>): BrandAudit {
 export class GrowthRepository {
   // — Workshops —
 
-  async findWorkshops(tenantId: string, query: ListWorkshopsQuery): Promise<{ data: Workshop[]; total: number }> {
+  async findWorkshops(
+    tenantId: string,
+    query: ListWorkshopsQuery,
+  ): Promise<{ data: Workshop[]; total: number }> {
     const where = {
       tenantId,
       deletedAt: null,
       ...(query.status && { status: query.status }),
-      ...(query.search && { title: { contains: query.search, mode: "insensitive" as const } }),
+      ...(query.search && {
+        title: { contains: query.search, mode: "insensitive" as const },
+      }),
     };
     const [rows, total] = await Promise.all([
       prisma.growthWorkshop.findMany({
@@ -127,19 +140,37 @@ export class GrowthRepository {
     return { data: rows.map(mapWorkshop), total };
   }
 
-  async findWorkshopById(tenantId: string, id: string): Promise<Workshop | null> {
-    const row = await prisma.growthWorkshop.findFirst({ where: { tenantId, id, deletedAt: null } });
+  async findWorkshopById(
+    tenantId: string,
+    id: string,
+  ): Promise<Workshop | null> {
+    const row = await prisma.growthWorkshop.findFirst({
+      where: { tenantId, id, deletedAt: null },
+    });
     return row ? mapWorkshop(row) : null;
   }
 
-  async createWorkshop(tenantId: string, input: CreateWorkshopInput): Promise<Workshop> {
+  async createWorkshop(
+    tenantId: string,
+    input: CreateWorkshopInput,
+    createdByName?: string,
+  ): Promise<Workshop> {
     const row = await prisma.growthWorkshop.create({
-      data: { tenantId, ...input, status: "Upcoming" },
+      data: {
+        tenantId,
+        ...input,
+        status: "Upcoming",
+        createdByName: createdByName ?? null,
+      },
     });
     return mapWorkshop(row);
   }
 
-  async updateWorkshop(tenantId: string, id: string, input: UpdateWorkshopInput): Promise<Workshop | null> {
+  async updateWorkshop(
+    tenantId: string,
+    id: string,
+    input: UpdateWorkshopInput,
+  ): Promise<Workshop | null> {
     const row = await prisma.growthWorkshop.updateMany({
       where: { tenantId, id, deletedAt: null },
       data: { ...input, updatedAt: new Date() },
@@ -148,7 +179,11 @@ export class GrowthRepository {
     return this.findWorkshopById(tenantId, id);
   }
 
-  async softDeleteWorkshop(tenantId: string, id: string, deletedById: string): Promise<boolean> {
+  async softDeleteWorkshop(
+    tenantId: string,
+    id: string,
+    deletedById: string,
+  ): Promise<boolean> {
     const result = await prisma.growthWorkshop.updateMany({
       where: { tenantId, id, deletedAt: null },
       data: { deletedAt: new Date(), deletedById },
@@ -158,7 +193,10 @@ export class GrowthRepository {
 
   // — Prospects —
 
-  async findProspects(tenantId: string, query: ListProspectsQuery): Promise<{ data: Prospect[]; total: number }> {
+  async findProspects(
+    tenantId: string,
+    query: ListProspectsQuery,
+  ): Promise<{ data: Prospect[]; total: number }> {
     const where = {
       tenantId,
       deletedAt: null,
@@ -185,19 +223,31 @@ export class GrowthRepository {
     return { data: rows.map(mapProspect), total };
   }
 
-  async findProspectById(tenantId: string, id: string): Promise<Prospect | null> {
-    const row = await prisma.growthProspect.findFirst({ where: { tenantId, id, deletedAt: null } });
+  async findProspectById(
+    tenantId: string,
+    id: string,
+  ): Promise<Prospect | null> {
+    const row = await prisma.growthProspect.findFirst({
+      where: { tenantId, id, deletedAt: null },
+    });
     return row ? mapProspect(row) : null;
   }
 
-  async createProspect(tenantId: string, input: CreateProspectInput): Promise<Prospect> {
+  async createProspect(
+    tenantId: string,
+    input: CreateProspectInput,
+  ): Promise<Prospect> {
     const row = await prisma.growthProspect.create({
       data: { tenantId, ...input, stage: "Registered" },
     });
     return mapProspect(row);
   }
 
-  async updateProspect(tenantId: string, id: string, input: UpdateProspectInput): Promise<Prospect | null> {
+  async updateProspect(
+    tenantId: string,
+    id: string,
+    input: UpdateProspectInput,
+  ): Promise<Prospect | null> {
     const result = await prisma.growthProspect.updateMany({
       where: { tenantId, id, deletedAt: null },
       data: { ...input, lastActivity: new Date(), updatedAt: new Date() },
@@ -206,10 +256,18 @@ export class GrowthRepository {
     return this.findProspectById(tenantId, id);
   }
 
-  async updateProspectStage(tenantId: string, id: string, input: UpdateProspectStageInput): Promise<Prospect | null> {
+  async updateProspectStage(
+    tenantId: string,
+    id: string,
+    input: UpdateProspectStageInput,
+  ): Promise<Prospect | null> {
     const result = await prisma.growthProspect.updateMany({
       where: { tenantId, id, deletedAt: null },
-      data: { stage: input.stage, lastActivity: new Date(), updatedAt: new Date() },
+      data: {
+        stage: input.stage,
+        lastActivity: new Date(),
+        updatedAt: new Date(),
+      },
     });
     if (result.count === 0) return null;
     return this.findProspectById(tenantId, id);
@@ -217,7 +275,10 @@ export class GrowthRepository {
 
   // — Prospect Activities —
 
-  async findProspectActivities(tenantId: string, prospectId: string): Promise<ProspectActivity[]> {
+  async findProspectActivities(
+    tenantId: string,
+    prospectId: string,
+  ): Promise<ProspectActivity[]> {
     const rows = await prisma.growthProspectActivity.findMany({
       where: { tenantId, prospectId },
       orderBy: { createdAt: "desc" },
@@ -239,10 +300,17 @@ export class GrowthRepository {
     tenantId: string,
     prospectId: string,
     actorId: string,
-    input: CreateProspectActivityInput
+    input: CreateProspectActivityInput,
   ): Promise<ProspectActivity> {
     const row = await prisma.growthProspectActivity.create({
-      data: { tenantId, prospectId, actorId, ...input },
+      data: {
+        tenantId,
+        prospectId,
+        actorId,
+        type: input.type,
+        description: input.description,
+        metadata: input.metadata as Prisma.InputJsonValue | undefined,
+      },
     });
     return {
       id: row.id,
@@ -258,7 +326,10 @@ export class GrowthRepository {
 
   // — Brand Audits —
 
-  async findBrandAudits(tenantId: string, query: ListBrandAuditsQuery): Promise<{ data: BrandAudit[]; total: number }> {
+  async findBrandAudits(
+    tenantId: string,
+    query: ListBrandAuditsQuery,
+  ): Promise<{ data: BrandAudit[]; total: number }> {
     const where = {
       tenantId,
       deletedAt: null,
@@ -277,12 +348,20 @@ export class GrowthRepository {
     return { data: rows.map(mapBrandAudit), total };
   }
 
-  async findBrandAuditById(tenantId: string, id: string): Promise<BrandAudit | null> {
-    const row = await prisma.growthBrandAudit.findFirst({ where: { tenantId, id, deletedAt: null } });
+  async findBrandAuditById(
+    tenantId: string,
+    id: string,
+  ): Promise<BrandAudit | null> {
+    const row = await prisma.growthBrandAudit.findFirst({
+      where: { tenantId, id, deletedAt: null },
+    });
     return row ? mapBrandAudit(row) : null;
   }
 
-  async findBrandAuditByProspect(tenantId: string, prospectId: string): Promise<BrandAudit | null> {
+  async findBrandAuditByProspect(
+    tenantId: string,
+    prospectId: string,
+  ): Promise<BrandAudit | null> {
     const row = await prisma.growthBrandAudit.findFirst({
       where: { tenantId, prospectId, deletedAt: null },
       orderBy: { createdAt: "desc" },
@@ -290,14 +369,26 @@ export class GrowthRepository {
     return row ? mapBrandAudit(row) : null;
   }
 
-  async createBrandAudit(tenantId: string, input: CreateBrandAuditInput): Promise<BrandAudit> {
+  async createBrandAudit(
+    tenantId: string,
+    input: CreateBrandAuditInput,
+  ): Promise<BrandAudit> {
     const row = await prisma.growthBrandAudit.create({
-      data: { tenantId, prospectId: input.prospectId, type: input.type, notes: input.notes ?? null },
+      data: {
+        tenantId,
+        prospectId: input.prospectId,
+        type: input.type,
+        notes: input.notes ?? null,
+      },
     });
     return mapBrandAudit(row);
   }
 
-  async updateBrandAuditStatus(tenantId: string, id: string, status: string): Promise<BrandAudit | null> {
+  async updateBrandAuditStatus(
+    tenantId: string,
+    id: string,
+    status: string,
+  ): Promise<BrandAudit | null> {
     const result = await prisma.growthBrandAudit.updateMany({
       where: { tenantId, id, deletedAt: null },
       data: { status, updatedAt: new Date() },

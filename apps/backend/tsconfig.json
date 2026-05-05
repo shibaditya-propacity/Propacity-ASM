@@ -4,13 +4,13 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "strict": true,
+    "skipLibCheck": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "outDir": "dist",
     "rootDir": "src",
     "paths": {
-      "@/*": ["./src/*"],
-      "@asm/schemas": ["../../packages/schemas/src/index.ts"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src", "prisma/seed.ts"]

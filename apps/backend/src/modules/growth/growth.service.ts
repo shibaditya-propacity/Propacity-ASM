@@ -29,6 +29,8 @@ import type {
 
 interface User {
   id: string;
+  name: string;
+  role: string;
   permissions: string[];
 }
 
@@ -61,11 +63,19 @@ export class GrowthService {
     return workshop;
   }
 
-  async createWorkshop(tenantId: string, user: User, input: CreateWorkshopInput): Promise<Workshop> {
+  async createWorkshop(
+    tenantId: string,
+    user: User,
+    input: CreateWorkshopInput,
+  ): Promise<Workshop> {
     if (!GrowthPolicy.canManageWorkshops(user)) {
       throw new ForbiddenError("growth.workshop.manage");
     }
-    const workshop = await this.repo.createWorkshop(tenantId, input);
+    const workshop = await this.repo.createWorkshop(
+      tenantId,
+      input,
+      user.name || undefined,
+    );
     await auditService.log({
       tenantId,
       actorId: user.id,
@@ -82,7 +92,7 @@ export class GrowthService {
     tenantId: string,
     user: User,
     id: string,
-    input: UpdateWorkshopInput
+    input: UpdateWorkshopInput,
   ): Promise<Workshop> {
     if (!GrowthPolicy.canManageWorkshops(user)) {
       throw new ForbiddenError("growth.workshop.manage");
@@ -99,7 +109,11 @@ export class GrowthService {
     return updated;
   }
 
-  async deleteWorkshop(tenantId: string, user: User, id: string): Promise<void> {
+  async deleteWorkshop(
+    tenantId: string,
+    user: User,
+    id: string,
+  ): Promise<void> {
     if (!GrowthPolicy.canDeleteWorkshop(user)) {
       throw new ForbiddenError("growth.workshop.delete");
     }
@@ -126,12 +140,19 @@ export class GrowthService {
     return prospect;
   }
 
-  async createProspect(tenantId: string, user: User, input: CreateProspectInput): Promise<Prospect> {
+  async createProspect(
+    tenantId: string,
+    user: User,
+    input: CreateProspectInput,
+  ): Promise<Prospect> {
     if (!GrowthPolicy.canManageProspects(user)) {
       throw new ForbiddenError("growth.prospect.manage");
     }
     // Verify workshop exists in this tenant
-    const workshop = await this.repo.findWorkshopById(tenantId, input.workshopId);
+    const workshop = await this.repo.findWorkshopById(
+      tenantId,
+      input.workshopId,
+    );
     if (!workshop) throw new WorkshopNotFoundError(input.workshopId);
 
     const prospect = await this.repo.createProspect(tenantId, input);
@@ -151,7 +172,7 @@ export class GrowthService {
     tenantId: string,
     user: User,
     id: string,
-    input: UpdateProspectInput
+    input: UpdateProspectInput,
   ): Promise<Prospect> {
     if (!GrowthPolicy.canManageProspects(user)) {
       throw new ForbiddenError("growth.prospect.manage");
@@ -172,7 +193,7 @@ export class GrowthService {
     tenantId: string,
     user: User,
     id: string,
-    input: UpdateProspectStageInput
+    input: UpdateProspectStageInput,
   ): Promise<Prospect> {
     if (!GrowthPolicy.canManageProspects(user)) {
       throw new ForbiddenError("growth.prospect.manage");
@@ -213,7 +234,10 @@ export class GrowthService {
     return updated;
   }
 
-  async getProspectActivities(tenantId: string, id: string): Promise<ProspectActivity[]> {
+  async getProspectActivities(
+    tenantId: string,
+    id: string,
+  ): Promise<ProspectActivity[]> {
     const prospect = await this.repo.findProspectById(tenantId, id);
     if (!prospect) throw new ProspectNotFoundError(id);
     return this.repo.findProspectActivities(tenantId, id);
@@ -223,7 +247,7 @@ export class GrowthService {
     tenantId: string,
     user: User,
     id: string,
-    input: CreateProspectActivityInput
+    input: CreateProspectActivityInput,
   ): Promise<ProspectActivity> {
     const prospect = await this.repo.findProspectById(tenantId, id);
     if (!prospect) throw new ProspectNotFoundError(id);
@@ -242,19 +266,25 @@ export class GrowthService {
     return audit;
   }
 
-  async getProspectBrandAudit(tenantId: string, prospectId: string): Promise<BrandAudit | null> {
+  async getProspectBrandAudit(
+    tenantId: string,
+    prospectId: string,
+  ): Promise<BrandAudit | null> {
     return this.repo.findBrandAuditByProspect(tenantId, prospectId);
   }
 
   async createBrandAudit(
     tenantId: string,
     user: User,
-    input: CreateBrandAuditInput
+    input: CreateBrandAuditInput,
   ): Promise<BrandAudit> {
     if (!GrowthPolicy.canManageAudits(user)) {
       throw new ForbiddenError("growth.audit.manage");
     }
-    const prospect = await this.repo.findProspectById(tenantId, input.prospectId);
+    const prospect = await this.repo.findProspectById(
+      tenantId,
+      input.prospectId,
+    );
     if (!prospect) throw new ProspectNotFoundError(input.prospectId);
 
     const audit = await this.repo.createBrandAudit(tenantId, input);
@@ -276,12 +306,16 @@ export class GrowthService {
     tenantId: string,
     user: User,
     id: string,
-    status: string
+    status: string,
   ): Promise<BrandAudit> {
     if (!GrowthPolicy.canManageAudits(user)) {
       throw new ForbiddenError("growth.audit.manage");
     }
-    const updated = await this.repo.updateBrandAuditStatus(tenantId, id, status);
+    const updated = await this.repo.updateBrandAuditStatus(
+      tenantId,
+      id,
+      status,
+    );
     if (!updated) throw new BrandAuditNotFoundError(id);
     await auditService.log({
       tenantId,

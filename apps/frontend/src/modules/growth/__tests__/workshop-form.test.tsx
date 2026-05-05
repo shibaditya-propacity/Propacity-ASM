@@ -12,8 +12,8 @@
  *   ✓ onSuccess callback fires after successful submit
  *   ✓ bare prop hides labels (used in modal context)
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WorkshopForm } from "../components/workshop-form";
@@ -86,6 +86,7 @@ const MOCK_WORKSHOP = {
   tags: null,
   notes: null,
   audienceSegment: null,
+  createdByName: null,
 } as const;
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -93,6 +94,10 @@ const MOCK_WORKSHOP = {
 describe("WorkshopForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   // ── Rendering ─────────────────────────────────────────────────────────────
@@ -165,7 +170,7 @@ describe("WorkshopForm", () => {
     );
 
     // Select format — the label has no htmlFor so we grab the only combobox in the form
-    const formatSelect = screen.getAllByRole("combobox")[0];
+    const formatSelect = screen.getAllByRole("combobox")[0]!;
     await user.selectOptions(formatSelect, "Online");
 
     // Fill date via the label container
@@ -178,7 +183,7 @@ describe("WorkshopForm", () => {
     // Fill capacity and ticket price
     const capacityInput = screen.getByPlaceholderText("100");
     // Multiple inputs share placeholder "0" (ticketPrice, adSpend, etc.) — grab the first (ticketPrice)
-    const ticketInput = screen.getAllByPlaceholderText("0")[0];
+    const ticketInput = screen.getAllByPlaceholderText("0")[0]!;
     await user.clear(capacityInput);
     await user.type(capacityInput, "100");
     await user.clear(ticketInput);
@@ -198,7 +203,10 @@ describe("WorkshopForm", () => {
   });
 
   it("calls onSuccess callback after a successful submit", async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({
+      advanceTimers: (ms) => vi.advanceTimersByTime(ms),
+    });
     vi.mocked(apiClient.post).mockResolvedValueOnce(MOCK_WORKSHOP);
 
     const onSuccess = vi.fn();
@@ -208,7 +216,7 @@ describe("WorkshopForm", () => {
       screen.getByPlaceholderText("Workshop title"),
       "Test Workshop",
     );
-    const formatSelect = screen.getAllByRole("combobox")[0];
+    const formatSelect = screen.getAllByRole("combobox")[0]!;
     await user.selectOptions(formatSelect, "Online");
 
     const dateLabel = screen.getByText(/^Date/).closest("div");
@@ -216,7 +224,7 @@ describe("WorkshopForm", () => {
     if (dateField) await user.type(dateField, "2026-06-01");
 
     const capacityInput = screen.getByPlaceholderText("100");
-    const ticketInput = screen.getAllByPlaceholderText("0")[0];
+    const ticketInput = screen.getAllByPlaceholderText("0")[0]!;
     await user.clear(capacityInput);
     await user.type(capacityInput, "50");
     await user.clear(ticketInput);
@@ -224,9 +232,14 @@ describe("WorkshopForm", () => {
 
     await user.click(screen.getByRole("button", { name: /Create Workshop/i }));
 
-    await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalledTimes(1);
+    // Wait for the API call to resolve, then advance past the 2200ms animation delay
+    await waitFor(() => expect(apiClient.post).toHaveBeenCalled());
+    await act(async () => {
+      vi.advanceTimersByTime(2500);
     });
+
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
   });
 
   // ── Error handling ────────────────────────────────────────────────────────
@@ -243,7 +256,7 @@ describe("WorkshopForm", () => {
       screen.getByPlaceholderText("Workshop title"),
       "Error Workshop",
     );
-    const formatSelect = screen.getAllByRole("combobox")[0];
+    const formatSelect = screen.getAllByRole("combobox")[0]!;
     await user.selectOptions(formatSelect, "Online");
 
     const dateLabel = screen.getByText(/^Date/).closest("div");
@@ -251,7 +264,7 @@ describe("WorkshopForm", () => {
     if (dateField) await user.type(dateField, "2026-06-01");
 
     const capacityInput = screen.getByPlaceholderText("100");
-    const ticketInput = screen.getAllByPlaceholderText("0")[0];
+    const ticketInput = screen.getAllByPlaceholderText("0")[0]!;
     await user.clear(capacityInput);
     await user.type(capacityInput, "100");
     await user.clear(ticketInput);

@@ -2,28 +2,20 @@ import { AppError, NotFoundError } from "@/core/errors/app-error";
 
 export class WorkshopNotFoundError extends NotFoundError {
   constructor(id: string) {
-    super("Workshop", id);
-    this.code = "GROWTH_WORKSHOP_NOT_FOUND";
+    super("Workshop", id, "GROWTH_WORKSHOP_NOT_FOUND");
   }
-
-  get code(): string {
-    return "GROWTH_WORKSHOP_NOT_FOUND";
-  }
-  set code(_v: string) { /* readonly */ }
 }
 
 export class ProspectNotFoundError extends NotFoundError {
   constructor(id: string) {
-    super("Prospect", id);
+    super("Prospect", id, "GROWTH_PROSPECT_NOT_FOUND");
   }
-  override get code() { return "GROWTH_PROSPECT_NOT_FOUND"; }
 }
 
 export class BrandAuditNotFoundError extends NotFoundError {
   constructor(id: string) {
-    super("BrandAudit", id);
+    super("BrandAudit", id, "GROWTH_BRAND_AUDIT_NOT_FOUND");
   }
-  override get code() { return "GROWTH_BRAND_AUDIT_NOT_FOUND"; }
 }
 
 export class InvalidStageTransitionError extends AppError {

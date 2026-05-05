@@ -29,11 +29,10 @@ export default function LoginPage() {
 
   function onSubmit(data: LoginInput) {
     // Stub: derive display name from email prefix until real auth is in place
-    const displayName = data.email
-      .split("@")[0]
+    const displayName = (data.email.split("@")[0] ?? data.email)
       .replace(/[._-]/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
-    login(displayName, data.email, "dev-stub-token");
+    login(displayName, data.email, "Other", "dev-stub-token", false);
     navigate("/", { replace: true });
   }
 
@@ -65,14 +64,21 @@ export default function LoginPage() {
             />
           </Field>
 
-          <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full mt-1">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="btn btn-primary w-full mt-1"
+          >
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
         </form>
 
         <p className="mt-5 text-center text-xs text-slate-500">
           Don&apos;t have an account?{" "}
-          <Link to="/signup" className="font-medium text-brand-600 hover:text-brand-700">
+          <Link
+            to="/signup"
+            className="font-medium text-brand-600 hover:text-brand-700"
+          >
             Create one
           </Link>
         </p>
@@ -106,7 +112,9 @@ function AuthCard({
         <p className="text-[11px] font-semibold uppercase tracking-widest text-brand-300 mb-1">
           Propacity ASM
         </p>
-        <h1 className="text-2xl font-bold text-white leading-tight">{heading}</h1>
+        <h1 className="text-2xl font-bold text-white leading-tight">
+          {heading}
+        </h1>
         <p className="mt-1 text-sm text-brand-200">{subheading}</p>
       </div>
       <div className="px-8 py-7">{children}</div>

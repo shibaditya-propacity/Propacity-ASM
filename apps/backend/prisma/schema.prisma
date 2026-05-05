@@ -84,6 +84,7 @@ model GrowthWorkshop {
   campaignBudget   Int      @default(0)
   expectedCPR      Int      @default(0)
   status           String   @default("Upcoming") // WorkshopStatus
+  createdByName    String?
   deletedAt        DateTime?
   deletedById      String?
   createdAt        DateTime @default(now())

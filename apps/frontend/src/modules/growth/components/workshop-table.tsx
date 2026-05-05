@@ -18,26 +18,37 @@ export function WorkshopTable({ workshops }: WorkshopTableProps) {
             <th className="th">Date / City</th>
             <th className="th">Capacity</th>
             <th className="th">Status</th>
+            <th className="th">Created by</th>
             <th className="th">Actions</th>
           </tr>
         </thead>
         <tbody>
           {workshops.map((w) => (
-            <tr key={w.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+            <tr
+              key={w.id}
+              className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
+            >
               <td className="td font-medium text-slate-900">{w.title}</td>
               <td className="td text-slate-600">{w.format}</td>
               <td className="td text-slate-600">
                 <div>{format(new Date(w.date), "dd MMM yyyy")}</div>
-                {w.city && <div className="text-xs text-slate-400">{w.city}</div>}
+                {w.city && (
+                  <div className="text-xs text-slate-400">{w.city}</div>
+                )}
               </td>
               <td className="td text-slate-600">
-                <span className="text-emerald-600 font-medium">{w.attended}</span>
+                <span className="text-emerald-600 font-medium">
+                  {w.attended}
+                </span>
                 <span className="text-slate-400"> / </span>
                 <span className="text-slate-700">{w.registered}</span>
                 <span className="text-slate-400 text-xs"> of {w.capacity}</span>
               </td>
               <td className="td">
                 <WorkshopStatusBadge status={w.status} />
+              </td>
+              <td className="td text-slate-500 text-xs">
+                {w.createdByName ?? <span className="text-slate-300">—</span>}
               </td>
               <td className="td">
                 <Link

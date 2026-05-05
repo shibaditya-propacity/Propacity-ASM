@@ -23,9 +23,9 @@ export class AppError extends Error {
 }
 
 export class NotFoundError extends AppError {
-  constructor(resource: string, id: string) {
+  constructor(resource: string, id: string, code = "NOT_FOUND") {
     super({
-      code: "NOT_FOUND",
+      code,
       message: `${resource} ${id} not found`,
       publicMessage: `${resource} not found`,
       statusCode: 404,
@@ -51,7 +51,8 @@ export class ValidationError extends AppError {
       message: `Validation failed: ${String(err)}`,
       publicMessage: "The request data is invalid.",
       statusCode: 400,
-      details: err instanceof Object ? (err as Record<string, unknown>) : undefined,
+      details:
+        err instanceof Object ? (err as Record<string, unknown>) : undefined,
     });
   }
 }

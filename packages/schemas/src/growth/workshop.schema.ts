@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const WorkshopStatusSchema = z.enum(["Upcoming", "Live", "Completed", "Cancelled"]);
+export const WorkshopStatusSchema = z.enum([
+  "Upcoming",
+  "Live",
+  "Completed",
+  "Cancelled",
+]);
 export type WorkshopStatus = z.infer<typeof WorkshopStatusSchema>;
 
 export const WorkshopFormatSchema = z.enum(["Online", "In-person"]);
@@ -59,6 +64,7 @@ export const WorkshopSchema = z.object({
   campaignBudget: z.number(),
   expectedCPR: z.number(),
   status: WorkshopStatusSchema,
+  createdByName: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

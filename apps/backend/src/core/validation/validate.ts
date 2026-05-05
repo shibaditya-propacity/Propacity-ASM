@@ -13,7 +13,14 @@ declare global {
         params?: unknown;
       };
       tenant: { id: string };
-      user: { id: string; tenantId: string; permissions: string[] };
+      user: {
+        id: string;
+        tenantId: string;
+        role: string;
+        name: string;
+        email: string;
+        permissions: string[];
+      };
     }
   }
 }
