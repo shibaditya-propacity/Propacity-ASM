@@ -108,6 +108,12 @@ jobs:
         env:
           CI: "true"
 
+      # Generate Prisma client before backend tests (required for @prisma/client imports)
+      - name: Prisma generate (backend tests)
+        run: pnpm --filter @asm/backend exec prisma generate
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
       # Backend tests (Vitest + supertest)
       # --coverage omitted: @vitest/coverage-v8 is not in backend devDependencies
       - name: Backend tests
