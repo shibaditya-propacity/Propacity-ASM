@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { Topbar } from "@/core/layout/topbar";
+import { useAuth } from "@/core/auth/use-auth";
 
 // URL of the Brand Audit Next.js service.
 // Development default: http://localhost:3001 (next dev -p 3001)
@@ -87,6 +88,28 @@ function LoadError({ url }: { url: string }) {
 export default function GrowthBrandAuditsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const { user } = useAuth();
+
+  // Send ASM auth state to Brand Audit iframe whenever user or iframe changes.
+  // postMessage is cross-origin safe — the Brand Audit's AuthProvider listens for this.
+  function sendAuthToIframe() {
+    const iframe = iframeRef.current;
+    if (!iframe?.contentWindow || !BRAND_AUDIT_URL) return;
+    if (user) {
+      iframe.contentWindow.postMessage(
+        { type: "ASM_AUTH", user: { name: user.name, email: user.email } },
+        BRAND_AUDIT_URL,
+      );
+    } else {
+      iframe.contentWindow.postMessage({ type: "ASM_LOGOUT" }, BRAND_AUDIT_URL);
+    }
+  }
+
+  // Re-send auth whenever ASM user state changes (login/logout)
+  useEffect(() => {
+    if (!loading) sendAuthToIframe();
+  }, [user, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!BRAND_AUDIT_URL) {
     return (
@@ -126,13 +149,18 @@ export default function GrowthBrandAuditsPage() {
 
         {!loadError && (
           <iframe
+            ref={iframeRef}
             key={iframeSrc}
             src={iframeSrc}
             title="Brand Audits — powered by Propacity"
             className={`w-full h-full border-0 transition-opacity duration-300 ${
               loading ? "opacity-0" : "opacity-100"
             }`}
-            onLoad={() => setLoading(false)}
+            onLoad={() => {
+              setLoading(false);
+              // Send auth immediately after iframe loads
+              sendAuthToIframe();
+            }}
             onError={() => {
               setLoading(false);
               setLoadError(true);
