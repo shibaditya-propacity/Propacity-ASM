@@ -16,10 +16,20 @@ import { WorkshopForm } from "@/modules/growth/components/workshop-form";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
-  { to: "/growth",             label: "Dashboard",   end: true,  Icon: LayoutDashboard },
-  { to: "/growth/workshops",   label: "Workshops",   end: false, Icon: CalendarDays },
-  { to: "/growth/prospects",   label: "Prospects",   end: false, Icon: Users },
-  { to: "/growth/brand-audits",label: "Brand Audits",end: false, Icon: BarChart3 },
+  { to: "/growth", label: "Dashboard", end: true, Icon: LayoutDashboard },
+  {
+    to: "/growth/workshops",
+    label: "Workshops",
+    end: false,
+    Icon: CalendarDays,
+  },
+  { to: "/growth/prospects", label: "Prospects", end: false, Icon: Users },
+  {
+    to: "/growth/brand-audits",
+    label: "Brand Audits",
+    end: false,
+    Icon: BarChart3,
+  },
 ] as const;
 
 const SIDEBAR_W_EXPANDED = 240;
@@ -27,10 +37,14 @@ const SIDEBAR_W_COLLAPSED = 64;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export function AppShell() {
-  const [collapsed,         setCollapsed]         = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [workshopModalOpen, setWorkshopModalOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Only @propacity.in email addresses may schedule workshops.
+  // The backend enforces the same rule — this is a UI convenience, not the only gate.
+  const canScheduleWorkshop = user?.email?.endsWith("@propacity.in") ?? false;
 
   function handleLogout() {
     logout();
@@ -42,7 +56,6 @@ export function AppShell() {
   return (
     /* Root — no overflow-hidden so sidebar tooltips can overflow right */
     <div className="flex h-screen bg-[#F4F6FB]">
-
       {/* ── Sidebar ── */}
       <aside
         style={{ width: sidebarW }}
@@ -56,31 +69,40 @@ export function AppShell() {
             </div>
             <span
               className="font-heading font-bold text-white text-sm tracking-tight whitespace-nowrap transition-all duration-[250ms]"
-              style={{ opacity: collapsed ? 0 : 1, width: collapsed ? 0 : "auto", overflow: "hidden" }}
+              style={{
+                opacity: collapsed ? 0 : 1,
+                width: collapsed ? 0 : "auto",
+                overflow: "hidden",
+              }}
             >
               Propacity ASM
             </span>
           </div>
         </div>
 
-        {/* Schedule CTA */}
-        <div className="p-3 border-b border-white/10 shrink-0">
-          <button
-            onClick={() => setWorkshopModalOpen(true)}
-            title={collapsed ? "Schedule a Workshop" : undefined}
-            className={`w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-all duration-[250ms] shadow-[0_0_18px_rgba(45,63,231,0.35)] hover:shadow-[0_0_24px_rgba(45,63,231,0.5)] ${
-              collapsed ? "h-9 px-0" : "h-9 px-3"
-            }`}
-          >
-            <CalendarPlus className="w-4 h-4 shrink-0" />
-            <span
-              className="whitespace-nowrap overflow-hidden transition-all duration-[200ms]"
-              style={{ maxWidth: collapsed ? 0 : 160, opacity: collapsed ? 0 : 1 }}
+        {/* Schedule CTA — visible only to @propacity.in users */}
+        {canScheduleWorkshop && (
+          <div className="p-3 border-b border-white/10 shrink-0">
+            <button
+              onClick={() => setWorkshopModalOpen(true)}
+              title={collapsed ? "Schedule a Workshop" : undefined}
+              className={`w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-all duration-[250ms] shadow-[0_0_18px_rgba(45,63,231,0.35)] hover:shadow-[0_0_24px_rgba(45,63,231,0.5)] ${
+                collapsed ? "h-9 px-0" : "h-9 px-3"
+              }`}
             >
-              Schedule a Workshop
-            </span>
-          </button>
-        </div>
+              <CalendarPlus className="w-4 h-4 shrink-0" />
+              <span
+                className="whitespace-nowrap overflow-hidden transition-all duration-[200ms]"
+                style={{
+                  maxWidth: collapsed ? 0 : 160,
+                  opacity: collapsed ? 0 : 1,
+                }}
+              >
+                Schedule a Workshop
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Nav */}
         <nav
@@ -90,7 +112,11 @@ export function AppShell() {
           {/* Section label */}
           <div
             className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1 whitespace-nowrap transition-all duration-[200ms] overflow-hidden"
-            style={{ opacity: collapsed ? 0 : 1, height: collapsed ? 0 : undefined, marginBottom: collapsed ? 0 : undefined }}
+            style={{
+              opacity: collapsed ? 0 : 1,
+              height: collapsed ? 0 : undefined,
+              marginBottom: collapsed ? 0 : undefined,
+            }}
           >
             Growth
           </div>
@@ -105,16 +131,20 @@ export function AppShell() {
                   className={({ isActive }) =>
                     `flex items-center gap-3 rounded-lg text-sm transition-colors duration-150 overflow-hidden
                     ${collapsed ? "px-0 py-2.5 justify-center" : "px-3 py-2.5"}
-                    ${isActive
-                      ? "bg-brand-500/15 text-white font-medium border-l-[3px] border-brand-500 pl-[calc(0.75rem-3px)]"
-                      : "text-slate-400 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent"
+                    ${
+                      isActive
+                        ? "bg-brand-500/15 text-white font-medium border-l-[3px] border-brand-500 pl-[calc(0.75rem-3px)]"
+                        : "text-slate-400 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent"
                     }`
                   }
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span
                     className="whitespace-nowrap overflow-hidden transition-all duration-[200ms]"
-                    style={{ maxWidth: collapsed ? 0 : 160, opacity: collapsed ? 0 : 1 }}
+                    style={{
+                      maxWidth: collapsed ? 0 : 160,
+                      opacity: collapsed ? 0 : 1,
+                    }}
                   >
                     {label}
                   </span>
@@ -143,19 +173,26 @@ export function AppShell() {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className="flex items-center justify-center w-full h-8 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors mt-2"
           >
-            {collapsed
-              ? <ChevronRight className="w-4 h-4" />
-              : <ChevronLeft className="w-4 h-4" />
-            }
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
           </button>
         </nav>
 
         {/* User section */}
         <div className="border-t border-white/10 p-3 shrink-0">
-          <div className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}>
+          <div
+            className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
+          >
             {/* Avatar */}
             <div
-              title={collapsed ? `${user?.name ?? "User"} · ${user?.role ?? ""}` : undefined}
+              title={
+                collapsed
+                  ? `${user?.name ?? "User"} · ${user?.role ?? ""}`
+                  : undefined
+              }
               className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-xs font-bold text-brand-300 shrink-0"
             >
               {user?.name?.[0]?.toUpperCase() ?? "U"}
@@ -164,10 +201,17 @@ export function AppShell() {
             {/* Name + role */}
             <div
               className="flex-1 min-w-0 overflow-hidden transition-all duration-[200ms]"
-              style={{ maxWidth: collapsed ? 0 : 160, opacity: collapsed ? 0 : 1 }}
+              style={{
+                maxWidth: collapsed ? 0 : 160,
+                opacity: collapsed ? 0 : 1,
+              }}
             >
-              <p className="text-xs font-semibold text-white truncate">{user?.name}</p>
-              <p className="text-[10px] text-white/40 truncate mt-0.5">{user?.role}</p>
+              <p className="text-xs font-semibold text-white truncate">
+                {user?.name}
+              </p>
+              <p className="text-[10px] text-white/40 truncate mt-0.5">
+                {user?.role}
+              </p>
             </div>
 
             {/* Logout */}
@@ -193,11 +237,15 @@ export function AppShell() {
       {workshopModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setWorkshopModalOpen(false); }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setWorkshopModalOpen(false);
+          }}
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-              <h2 className="font-heading text-base font-bold text-slate-900">Schedule a Workshop</h2>
+              <h2 className="font-heading text-base font-bold text-slate-900">
+                Schedule a Workshop
+              </h2>
               <button
                 onClick={() => setWorkshopModalOpen(false)}
                 aria-label="Close"
@@ -207,7 +255,10 @@ export function AppShell() {
               </button>
             </div>
             <div className="overflow-y-auto p-6">
-              <WorkshopForm bare onSuccess={() => setWorkshopModalOpen(false)} />
+              <WorkshopForm
+                bare
+                onSuccess={() => setWorkshopModalOpen(false)}
+              />
             </div>
           </div>
         </div>
