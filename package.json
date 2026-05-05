@@ -30,7 +30,10 @@
       "esbuild",
       "msgpackr-extract",
       "prisma"
-    ]
+    ],
+    "overrides": {
+      "tar": ">=7.5.11"
+    }
   },
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
