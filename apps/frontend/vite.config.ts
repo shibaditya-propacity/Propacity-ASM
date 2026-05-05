@@ -7,16 +7,36 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@asm/schemas": path.resolve(__dirname, "../../packages/schemas/src/index.ts"),
+      "@asm/schemas": path.resolve(
+        __dirname,
+        "../../packages/schemas/src/index.ts",
+      ),
     },
   },
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: [],
+    // test-setup.ts adds @testing-library/jest-dom matchers (toBeInTheDocument, etc.)
+    setupFiles: ["./src/test-setup.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      // Exclude non-source files from coverage measurement
+      exclude: [
+        "src/test-setup.ts",
+        "src/main.tsx",
+        "src/router.tsx",
+        "**/*.d.ts",
+        "**/node_modules/**",
+        "**/dist/**",
+      ],
+    },
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "@asm/schemas": path.resolve(__dirname, "../../packages/schemas/src/index.ts"),
+      "@asm/schemas": path.resolve(
+        __dirname,
+        "../../packages/schemas/src/index.ts",
+      ),
     },
   },
 });

@@ -27,10 +27,23 @@ const config: Config = {
           "0%":   { opacity: "0", transform: "translateY(-12px) scale(0.96)" },
           "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
         },
+        "fade-up": {
+          "0%":   { opacity: "0", transform: "translateY(14px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in": {
+          "0%":   { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
       },
       animation: {
         "auth-in":  "auth-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
         "toast-in": "toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "fade-up":  "fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
+        "fade-in":  "fade-in 0.4s ease both",
+      },
+      transitionProperty: {
+        width: "width",
       },
     },
   },

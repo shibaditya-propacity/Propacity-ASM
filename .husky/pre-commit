@@ -1,0 +1,15 @@
+#!/bin/sh
+# .husky/pre-commit
+#
+# Runs lint-staged on every git commit to auto-format staged files with Prettier.
+# Only staged files are processed — fast even in a large monorepo.
+#
+# ESLint is NOT run here because it is not yet installed as a project dependency.
+# TODO: once ESLint is added (pnpm add -D eslint @typescript-eslint/parser ... at root),
+#       add it back to the lint-staged config in package.json:
+#
+#   "**/*.{ts,tsx}": ["eslint --fix --max-warnings 0", "prettier --write"]
+#
+# ESLint is already enforced as a blocking gate in CI (ci.yml → lint job).
+
+pnpm lint-staged
