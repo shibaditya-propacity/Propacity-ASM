@@ -1,129 +1,144 @@
-import { useSearchParams, Link } from "react-router-dom";
-import { format } from "date-fns";
+import { useState } from "react";
+import { ExternalLink } from "lucide-react";
 import { Topbar } from "@/core/layout/topbar";
-import { LoadingState } from "@/core/components/loading-state";
-import { ErrorState } from "@/core/components/error-state";
-import { EmptyState } from "@/core/components/empty-state";
-import { Chip } from "@/core/ui";
-import { useBrandAudits } from "../api/use-brand-audits";
-import type { AuditStatus } from "../types";
 
-const STATUS_OPTIONS: AuditStatus[] = [
-  "Pending",
-  "In Progress",
-  "Reviewed",
-  "Shared",
-  "Converted",
-];
+// URL of the Brand Audit Next.js service.
+// Development default: http://localhost:3001 (next dev -p 3001)
+// Production: set VITE_BRAND_AUDIT_URL in your hosting environment.
+const BRAND_AUDIT_URL =
+  (import.meta.env.VITE_BRAND_AUDIT_URL as string | undefined) ?? "";
 
-type ChipTone = "slate" | "emerald" | "amber" | "red" | "blue" | "violet";
+function LoadingSkeleton() {
+  return (
+    <div className="absolute inset-0 bg-[#F4F6FB] p-6 flex flex-col gap-5 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div className="h-7 bg-slate-200 rounded-lg w-48" />
+        <div className="h-9 bg-slate-200 rounded-lg w-28" />
+      </div>
+      <div className="grid grid-cols-3 gap-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="h-28 bg-slate-200 rounded-xl" />
+        ))}
+      </div>
+      <div className="flex-1 bg-slate-200 rounded-xl" />
+    </div>
+  );
+}
 
-function auditStatusTone(status: AuditStatus): ChipTone {
-  switch (status) {
-    case "Pending":
-      return "amber";
-    case "In Progress":
-      return "blue";
-    case "Reviewed":
-      return "violet";
-    case "Shared":
-    case "Converted":
-      return "emerald";
-    default:
-      return "slate";
-  }
+function NotConfigured() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
+      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+        <ExternalLink className="w-5 h-5 text-slate-400" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-700">
+          Brand Audit service not configured
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          Set{" "}
+          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
+            VITE_BRAND_AUDIT_URL
+          </code>{" "}
+          in your{" "}
+          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
+            .env.local
+          </code>{" "}
+          file.
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          Then start the Brand Audit app:{" "}
+          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
+            cd Brand-audit && npm run dev
+          </code>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function LoadError({ url }: { url: string }) {
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
+      <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
+        <ExternalLink className="w-5 h-5 text-red-400" />
+      </div>
+      <div>
+        <p className="text-sm font-semibold text-slate-700">
+          Could not load Brand Audit app
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          Make sure the Brand Audit service is running at{" "}
+          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
+            {url}
+          </code>
+        </p>
+        <p className="text-xs text-slate-400 mt-1">
+          Start it with:{" "}
+          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
+            cd Brand-audit && npm run dev
+          </code>
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default function GrowthBrandAuditsPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const status = (searchParams.get("status") ?? undefined) as AuditStatus | undefined;
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
-  const { data, isLoading, isError, error, refetch } = useBrandAudits({ status });
-
-  function setFilter(key: string, value: string) {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (value) {
-        next.set(key, value);
-      } else {
-        next.delete(key);
-      }
-      return next;
-    });
+  if (!BRAND_AUDIT_URL) {
+    return (
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <Topbar title="Brand Audits" />
+        <NotConfigured />
+      </div>
+    );
   }
 
+  // Append ?embedded=1 so the Brand Audit app hides its own TopBar
+  const iframeSrc = `${BRAND_AUDIT_URL}?embedded=1`;
+
   return (
-    <div className="flex flex-col flex-1 overflow-auto">
-      <Topbar title="Brand Audits" />
-
-      <div className="p-6 space-y-4 flex-1">
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3">
-          <select
-            value={status ?? ""}
-            onChange={(e) => setFilter("status", e.target.value)}
-            className="input w-44"
+    <div className="flex flex-col flex-1 overflow-hidden">
+      <Topbar
+        title="Brand Audits"
+        actions={
+          <a
+            href={BRAND_AUDIT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Open Brand Audit in new tab"
+            className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
           >
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+            <ExternalLink className="w-3.5 h-3.5" />
+            Open in tab
+          </a>
+        }
+      />
 
-        {/* Content */}
-        {isLoading ? (
-          <LoadingState />
-        ) : isError ? (
-          <ErrorState error={error} onRetry={refetch} />
-        ) : !data || data.length === 0 ? (
-          <EmptyState
-            title="No brand audits found"
-            description="Audits are created from prospect detail pages."
+      {/* Fills all height below the topbar */}
+      <div className="flex-1 relative overflow-hidden">
+        {loading && !loadError && <LoadingSkeleton />}
+
+        {loadError && <LoadError url={BRAND_AUDIT_URL} />}
+
+        {!loadError && (
+          <iframe
+            key={iframeSrc}
+            src={iframeSrc}
+            title="Brand Audits — powered by Propacity"
+            className={`w-full h-full border-0 transition-opacity duration-300 ${
+              loading ? "opacity-0" : "opacity-100"
+            }`}
+            onLoad={() => setLoading(false)}
+            onError={() => {
+              setLoading(false);
+              setLoadError(true);
+            }}
+            allow="same-origin"
           />
-        ) : (
-          <div className="card overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200">
-                  <th className="th">Prospect</th>
-                  <th className="th">Type</th>
-                  <th className="th">Status</th>
-                  <th className="th">Score</th>
-                  <th className="th">Created At</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.map((audit) => (
-                  <tr
-                    key={audit.id}
-                    className="border-b border-slate-100 last:border-0 hover:bg-slate-50"
-                  >
-                    <td className="td">
-                      <Link
-                        to={`/growth/prospects/${audit.prospectId}`}
-                        className="text-brand-600 hover:text-brand-700 font-medium"
-                      >
-                        {audit.prospectId}
-                      </Link>
-                    </td>
-                    <td className="td text-slate-600">{audit.type}</td>
-                    <td className="td">
-                      <Chip tone={auditStatusTone(audit.status)}>{audit.status}</Chip>
-                    </td>
-                    <td className="td text-slate-700 font-medium">
-                      {audit.overallScore !== null ? audit.overallScore : "-"}
-                    </td>
-                    <td className="td text-slate-500 text-xs">
-                      {format(new Date(audit.createdAt), "dd MMM yyyy")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         )}
       </div>
     </div>
