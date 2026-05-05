@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authGuard } from "@/core/auth/auth.guard";
-import { propacityEmailGuard } from "@/core/auth/propacity-email.guard";
+import { developerRoleGuard } from "@/core/auth/developer-role.guard";
 import { tenantGuard } from "@/core/tenant/tenant.guard";
 import { validate } from "@/core/validation/validate";
 import { GrowthController } from "./growth.controller";
@@ -36,7 +36,7 @@ export function registerGrowthRoutes(
   );
   r.post(
     "/workshops",
-    propacityEmailGuard, // only @propacity.in emails may create workshops
+    developerRoleGuard, // Developer role cannot create workshops
     validate({ body: CreateWorkshopSchema }),
     controller.createWorkshop,
   );

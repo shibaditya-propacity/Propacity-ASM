@@ -13,6 +13,7 @@ function signToken(payload: {
   tenantId: string;
   role: string;
   email: string;
+  name: string;
 }): string {
   return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES,
@@ -49,6 +50,7 @@ export class AuthService {
       tenantId: tenant.id,
       role: user.role,
       email: user.email,
+      name: user.name,
     });
     return {
       token,
@@ -82,6 +84,7 @@ export class AuthService {
       tenantId: user.tenantId,
       role: user.role,
       email: user.email,
+      name: user.name,
     });
     return {
       token,

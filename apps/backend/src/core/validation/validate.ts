@@ -16,6 +16,8 @@ declare global {
       user: {
         id: string;
         tenantId: string;
+        role: string;
+        name: string;
         email: string;
         permissions: string[];
       };

@@ -10,6 +10,7 @@ interface JwtPayload {
   tenantId: string;
   role: string;
   email: string;
+  name: string;
 }
 
 export function authGuard(
@@ -35,11 +36,25 @@ export function authGuard(
 
   try {
     const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const role = payload.role ?? "";
+    // Derive permissions from role. Developer role has read-only access.
+    const permissions =
+      role === "Developer"
+        ? ["growth.view"]
+        : [
+            "growth.view",
+            "growth.workshop.manage",
+            "growth.workshop.delete",
+            "growth.prospect.manage",
+            "growth.audit.manage",
+          ];
     req.user = {
       id: payload.sub,
       tenantId: payload.tenantId,
+      role,
+      name: payload.name ?? "",
       email: payload.email ?? "",
-      permissions: [],
+      permissions,
     };
     next();
   } catch {
