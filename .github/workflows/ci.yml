@@ -109,8 +109,9 @@ jobs:
           CI: "true"
 
       # Backend tests (Vitest + supertest)
+      # --coverage omitted: @vitest/coverage-v8 is not in backend devDependencies
       - name: Backend tests
-        run: pnpm --filter @asm/backend exec vitest run --coverage
+        run: pnpm --filter @asm/backend exec vitest run
         env:
           CI: "true"
           DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
