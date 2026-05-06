@@ -14,7 +14,15 @@ import { registerBrandAuditRoutes } from "@/modules/brand-audit/brand-audit.rout
 export function createApp(): express.Application {
   const app = express();
 
-  app.use(cors({ origin: true, credentials: true }));
+  const allowedOrigin = process.env["ALLOWED_ORIGIN"];
+  app.use(
+    cors({
+      origin: allowedOrigin
+        ? allowedOrigin.split(",").map((o) => o.trim())
+        : true,
+      credentials: true,
+    }),
+  );
   app.use(express.json({ limit: "1mb" }));
 
   const apiRouter = Router();
