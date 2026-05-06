@@ -320,7 +320,11 @@ export class BrandAuditController {
     const id = (req.params["id"] ??
       (req.validated?.params as IdParam | undefined)?.id) as string;
     const tenantId = req.tenant.id;
-    const apiBase = `http://localhost:${process.env["PORT"] ?? 3000}/api/v1/brand-audit`;
+    const selfOrigin =
+      process.env["API_BASE_URL"] ??
+      process.env["RENDER_EXTERNAL_URL"] ??
+      `http://localhost:${process.env["PORT"] ?? 3000}`;
+    const apiBase = `${selfOrigin}/api/v1/brand-audit`;
     const authHeader = req.headers["authorization"] ?? "";
 
     try {
@@ -625,7 +629,11 @@ export class BrandAuditController {
 
     const id = req.params["id"] as string;
     const tenantId = req.tenant.id;
-    const apiBase = `http://localhost:${process.env["PORT"] ?? 3000}/api/v1/brand-audit`;
+    const selfOrigin =
+      process.env["API_BASE_URL"] ??
+      process.env["RENDER_EXTERNAL_URL"] ??
+      `http://localhost:${process.env["PORT"] ?? 3000}`;
+    const apiBase = `${selfOrigin}/api/v1/brand-audit`;
     const authHeader = req.headers["authorization"] ?? "";
 
     // dimension + skipCollection from query params
