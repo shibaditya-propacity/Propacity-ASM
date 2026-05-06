@@ -52,39 +52,51 @@ export function AppShell() {
   const sidebarW = collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_EXPANDED;
 
   return (
-    /* Root — no overflow-hidden so sidebar tooltips can overflow right */
     <div className="flex h-screen bg-[#F4F6FB]">
       {/* ── Sidebar ── */}
       <aside
         style={{ width: sidebarW }}
-        className="shrink-0 flex flex-col bg-[#0F172A] transition-[width] duration-[250ms] ease-in-out z-20"
+        className="shrink-0 flex flex-col bg-[#0F172A] transition-[width] duration-[250ms] ease-in-out z-20 relative"
       >
+        {/* Subtle right-edge gradient glow */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+
         {/* Logo */}
-        <div className="h-16 flex items-center border-b border-white/10 shrink-0 overflow-hidden px-4">
+        <div className="h-16 flex items-center border-b border-white/8 shrink-0 overflow-hidden px-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center shrink-0 text-white font-bold text-xs">
-              P
-            </div>
-            <span
-              className="font-heading font-bold text-white text-sm tracking-tight whitespace-nowrap transition-all duration-[250ms]"
+            <img
+              src="/propacity-logo.png"
+              alt="Propacity"
+              width={28}
+              height={28}
+              className="rounded-lg shrink-0 object-contain"
+            />
+            <div
+              className="overflow-hidden transition-all duration-[250ms]"
               style={{
                 opacity: collapsed ? 0 : 1,
                 width: collapsed ? 0 : "auto",
-                overflow: "hidden",
+                maxWidth: collapsed ? 0 : 160,
               }}
             >
-              Propacity ASM
-            </span>
+              <img
+                src="/propacity-text.png"
+                alt="Propacity"
+                width={88}
+                height={22}
+                className="object-contain brightness-0 invert whitespace-nowrap"
+              />
+            </div>
           </div>
         </div>
 
         {/* Schedule CTA — hidden for Developer role */}
         {canScheduleWorkshop && (
-          <div className="p-3 border-b border-white/10 shrink-0">
+          <div className="p-3 border-b border-white/8 shrink-0">
             <button
               onClick={() => setWorkshopModalOpen(true)}
               title={collapsed ? "Schedule a Workshop" : undefined}
-              className={`w-full flex items-center justify-center gap-2 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-all duration-[250ms] shadow-[0_0_18px_rgba(45,63,231,0.35)] hover:shadow-[0_0_24px_rgba(45,63,231,0.5)] ${
+              className={`w-full flex items-center justify-center gap-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold transition-all duration-[250ms] shadow-[0_0_20px_rgba(45,63,231,0.3)] hover:shadow-[0_0_28px_rgba(45,63,231,0.5)] hover:-translate-y-0.5 ${
                 collapsed ? "h-9 px-0" : "h-9 px-3"
               }`}
             >
@@ -104,16 +116,16 @@ export function AppShell() {
 
         {/* Nav */}
         <nav
-          className="flex-1 p-3 flex flex-col"
+          className="flex-1 p-3 flex flex-col gap-0.5"
           style={{ overflow: collapsed ? "visible" : "auto" }}
         >
           {/* Section label */}
           <div
-            className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/30 mb-1 whitespace-nowrap transition-all duration-[200ms] overflow-hidden"
+            className="px-2 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-widest text-white/25 whitespace-nowrap transition-all duration-[200ms] overflow-hidden"
             style={{
               opacity: collapsed ? 0 : 1,
               height: collapsed ? 0 : undefined,
-              marginBottom: collapsed ? 0 : undefined,
+              marginBottom: collapsed ? 0 : 4,
             }}
           >
             Growth
@@ -127,18 +139,18 @@ export function AppShell() {
                   end={end}
                   title={collapsed ? label : undefined}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg text-sm transition-colors duration-150 overflow-hidden
+                    `flex items-center gap-3 rounded-xl text-sm transition-all duration-150 overflow-hidden
                     ${collapsed ? "px-0 py-2.5 justify-center" : "px-3 py-2.5"}
                     ${
                       isActive
-                        ? "bg-brand-500/15 text-white font-medium border-l-[3px] border-brand-500 pl-[calc(0.75rem-3px)]"
-                        : "text-slate-400 hover:text-white hover:bg-white/5 border-l-[3px] border-transparent"
+                        ? "bg-brand-500/15 text-white font-semibold border-l-[3px] border-brand-500 pl-[calc(0.75rem-3px)]"
+                        : "text-slate-400 hover:text-white hover:bg-white/6 border-l-[3px] border-transparent"
                     }`
                   }
                 >
                   <Icon className="w-4 h-4 shrink-0" />
                   <span
-                    className="whitespace-nowrap overflow-hidden transition-all duration-[200ms]"
+                    className="whitespace-nowrap overflow-hidden transition-all duration-[200ms] text-[13px]"
                     style={{
                       maxWidth: collapsed ? 0 : 160,
                       opacity: collapsed ? 0 : 1,
@@ -148,16 +160,15 @@ export function AppShell() {
                   </span>
                 </NavLink>
 
-                {/* Custom tooltip (only in collapsed mode) */}
+                {/* Tooltip (collapsed mode) */}
                 {collapsed && (
                   <div
                     className="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50
-                      px-2.5 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-lg
-                      whitespace-nowrap pointer-events-none shadow-lg
+                      px-2.5 py-1.5 bg-slate-800 border border-white/10 text-white text-xs font-medium rounded-lg
+                      whitespace-nowrap pointer-events-none shadow-xl
                       opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                   >
                     {label}
-                    {/* Arrow */}
                     <span className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-800" />
                   </div>
                 )}
@@ -169,7 +180,7 @@ export function AppShell() {
           <button
             onClick={() => setCollapsed((v) => !v)}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex items-center justify-center w-full h-8 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors mt-2"
+            className="flex items-center justify-center w-full h-8 rounded-xl text-slate-600 hover:text-white hover:bg-white/6 transition-colors mt-2"
           >
             {collapsed ? (
               <ChevronRight className="w-4 h-4" />
@@ -180,7 +191,7 @@ export function AppShell() {
         </nav>
 
         {/* User section */}
-        <div className="border-t border-white/10 p-3 shrink-0">
+        <div className="border-t border-white/8 p-3 shrink-0">
           <div
             className={`flex items-center gap-2.5 ${collapsed ? "justify-center" : ""}`}
           >
@@ -191,7 +202,7 @@ export function AppShell() {
                   ? `${user?.name ?? "User"} · ${user?.role ?? ""}`
                   : undefined
               }
-              className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-xs font-bold text-brand-300 shrink-0"
+              className="w-8 h-8 rounded-full bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-xs font-bold text-brand-300 shrink-0 ring-2 ring-brand-500/10"
             >
               {user?.name?.[0]?.toUpperCase() ?? "U"}
             </div>
@@ -204,10 +215,10 @@ export function AppShell() {
                 opacity: collapsed ? 0 : 1,
               }}
             >
-              <p className="text-xs font-semibold text-white truncate">
+              <p className="text-[13px] font-semibold text-white truncate leading-tight">
                 {user?.name}
               </p>
-              <p className="text-[10px] text-white/40 truncate mt-0.5">
+              <p className="text-[10px] text-white/35 truncate mt-0.5 font-medium">
                 {user?.role}
               </p>
             </div>
@@ -217,7 +228,7 @@ export function AppShell() {
               <button
                 onClick={handleLogout}
                 aria-label="Sign out"
-                className="text-slate-500 hover:text-white transition-colors shrink-0"
+                className="text-slate-600 hover:text-white transition-colors shrink-0 p-1 rounded-lg hover:bg-white/6"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -241,13 +252,22 @@ export function AppShell() {
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-              <h2 className="font-heading text-base font-bold text-slate-900">
-                Schedule a Workshop
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/propacity-logo.png"
+                  alt="Propacity"
+                  width={22}
+                  height={22}
+                  className="rounded-md object-contain"
+                />
+                <h2 className="font-heading text-base font-bold text-slate-900">
+                  Schedule a Workshop
+                </h2>
+              </div>
               <button
                 onClick={() => setWorkshopModalOpen(false)}
                 aria-label="Close"
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
