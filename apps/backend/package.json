@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
+    "start": "tsx src/index.ts",
     "test": "vitest run",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
@@ -23,6 +24,7 @@
     "jsonwebtoken": "^9.0.2",
     "pino": "^9.2.0",
     "pino-http": "^10.2.0",
+    "tsx": "^4.15.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
@@ -32,7 +34,6 @@
     "@types/supertest": "^6.0.2",
     "prisma": "^5.14.0",
     "supertest": "^7.0.0",
-    "tsx": "^4.15.0",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
   }
