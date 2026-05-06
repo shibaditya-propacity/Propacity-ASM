@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -18,11 +19,13 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users            User[]
-  workshops        GrowthWorkshop[]
-  prospects        GrowthProspect[]
-  brandAudits      GrowthBrandAudit[]
+  users              User[]
+  workshops          GrowthWorkshop[]
+  prospects          GrowthProspect[]
+  brandAudits        GrowthBrandAudit[]
   prospectActivities GrowthProspectActivity[]
+  auditDevelopers    AuditDeveloper[]
+  audits             Audit[]
 }
 
 model User {
@@ -128,8 +131,9 @@ model GrowthProspect {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  activities GrowthProspectActivity[]
+  activities  GrowthProspectActivity[]
   brandAudits GrowthBrandAudit[]
+  fullAudits  Audit[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, stage])
@@ -180,4 +184,82 @@ model GrowthBrandAudit {
   @@index([tenantId, prospectId])
   @@index([tenantId, status])
   @@map("growth_brand_audits")
+}
+
+// =============================================================
+// MODULE: BRAND AUDIT (full AI-powered audit engine)
+// =============================================================
+
+model AuditDeveloper {
+  id                String   @id @default(cuid())
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brandName         String
+  legalName         String?
+  domain            String?
+  city              String?
+  yearEstablished   Int?
+  positioning       String?
+  productType       String?
+  microMarkets      String[]
+  targetSegments    String[]
+  promoterName      String?
+  promoterLinkedIn  String?
+  websiteUrl        String?
+  instagramHandle   String?
+  facebookUrl       String?
+  linkedinUrl       String?
+  youtubeUrl        String?
+  whatsappNumber    String?
+  gmbPlaceId        String?
+  acres99Url        String?
+  housingUrl        String?
+  magicbricksUrl    String?
+  reraNumbers       String[]
+  reraState         String?
+  adSpendRange      String?
+  adPlatforms       String[]
+  crmTool           String?
+  competitors       String[]
+  metaAdLibraryName String?
+  pdlData           Json?
+  collateralDocs    Json     @default("[]")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  audits Audit[]
+
+  @@index([tenantId])
+  @@index([tenantId, brandName])
+  @@map("audit_developers")
+}
+
+model Audit {
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  developerId      String
+  developer        AuditDeveloper  @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  prospectId       String?
+  prospect         GrowthProspect? @relation(fields: [prospectId], references: [id], onDelete: SetNull)
+  auditorName      String?
+  auditDate        DateTime        @default(now())
+  objective        String?
+  knownRedFlags    String?
+  overallScore     Float?
+  status           String          @default("DRAFT")
+  collectedData    Json?
+  dataSourceStatus Json?
+  dimensions       Json            @default("[]")
+  assets           Json            @default("[]")
+  manualOverrides  Json?
+  deletedAt        DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
+  @@index([tenantId, developerId])
+  @@index([tenantId, prospectId])
+  @@map("audits")
 }

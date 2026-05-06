@@ -9,6 +9,7 @@ import { registerGrowthRoutes } from "@/modules/growth/growth.routes";
 import { GrowthController } from "@/modules/growth/growth.controller";
 import { GrowthService } from "@/modules/growth/growth.service";
 import { GrowthRepository } from "@/modules/growth/growth.repository";
+import { registerBrandAuditRoutes } from "@/modules/brand-audit/brand-audit.routes";
 
 export function createApp(): express.Application {
   const app = express();
@@ -19,16 +20,19 @@ export function createApp(): express.Application {
   const apiRouter = Router();
 
   // Auth module wiring (public routes — no authGuard)
-  const authRepo       = new AuthRepository();
-  const authService    = new AuthService(authRepo);
+  const authRepo = new AuthRepository();
+  const authService = new AuthService(authRepo);
   const authController = new AuthController(authService);
   registerAuthRoutes(apiRouter, authController);
 
   // Growth module wiring
-  const growthRepo       = new GrowthRepository();
-  const growthService    = new GrowthService(growthRepo);
+  const growthRepo = new GrowthRepository();
+  const growthService = new GrowthService(growthRepo);
   const growthController = new GrowthController(growthService);
   registerGrowthRoutes(apiRouter, growthController);
+
+  // Brand Audit module (self-wired)
+  registerBrandAuditRoutes(apiRouter);
 
   app.use("/api/v1", apiRouter);
   app.use(errorHandler);

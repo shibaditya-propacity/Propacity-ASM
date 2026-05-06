@@ -1,172 +1,112 @@
-import { useEffect, useRef, useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Plus } from "lucide-react";
 import { Topbar } from "@/core/layout/topbar";
-import { useAuth } from "@/core/auth/use-auth";
-
-// URL of the Brand Audit Next.js service.
-// Development default: http://localhost:3001 (next dev -p 3001)
-// Production: set VITE_BRAND_AUDIT_URL in your hosting environment.
-const BRAND_AUDIT_URL =
-  (import.meta.env.VITE_BRAND_AUDIT_URL as string | undefined) ?? "";
-
-function LoadingSkeleton() {
-  return (
-    <div className="absolute inset-0 bg-[#F4F6FB] p-6 flex flex-col gap-5 animate-pulse">
-      <div className="flex items-center justify-between">
-        <div className="h-7 bg-slate-200 rounded-lg w-48" />
-        <div className="h-9 bg-slate-200 rounded-lg w-28" />
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="h-28 bg-slate-200 rounded-xl" />
-        ))}
-      </div>
-      <div className="flex-1 bg-slate-200 rounded-xl" />
-    </div>
-  );
-}
-
-function NotConfigured() {
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center px-6">
-      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-        <ExternalLink className="w-5 h-5 text-slate-400" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-slate-700">
-          Brand Audit service not configured
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          Set{" "}
-          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-            VITE_BRAND_AUDIT_URL
-          </code>{" "}
-          in your{" "}
-          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-            .env.local
-          </code>{" "}
-          file.
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          Then start the Brand Audit app:{" "}
-          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-            cd Brand-audit && npm run dev
-          </code>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function LoadError({ url }: { url: string }) {
-  return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center px-6">
-      <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center">
-        <ExternalLink className="w-5 h-5 text-red-400" />
-      </div>
-      <div>
-        <p className="text-sm font-semibold text-slate-700">
-          Could not load Brand Audit app
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          Make sure the Brand Audit service is running at{" "}
-          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-            {url}
-          </code>
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          Start it with:{" "}
-          <code className="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-600">
-            cd Brand-audit && npm run dev
-          </code>
-        </p>
-      </div>
-    </div>
-  );
-}
+import { LoadingState } from "@/core/components/loading-state";
+import { ErrorState } from "@/core/components/error-state";
+import { EmptyState } from "@/core/components/empty-state";
+import { useFullAudits } from "../api/use-full-audits";
+import { useCreateFullAudit } from "../api/use-create-full-audit";
+import { AuditStatusBadge } from "../components/audit-status-badge";
+import { CreateFullAuditForm } from "../components/create-full-audit-form";
+import type { CreateFullAuditInput } from "../brand-audit.types";
 
 export default function GrowthBrandAuditsPage() {
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [showForm, setShowForm] = useState(false);
+  const { data, isLoading, isError, error, refetch } = useFullAudits();
+  const create = useCreateFullAudit();
 
-  // Send ASM auth state to Brand Audit iframe whenever user or iframe changes.
-  // postMessage is cross-origin safe — the Brand Audit's AuthProvider listens for this.
-  function sendAuthToIframe() {
-    const iframe = iframeRef.current;
-    if (!iframe?.contentWindow || !BRAND_AUDIT_URL) return;
-    if (user) {
-      iframe.contentWindow.postMessage(
-        { type: "ASM_AUTH", user: { name: user.name, email: user.email } },
-        BRAND_AUDIT_URL,
-      );
-    } else {
-      iframe.contentWindow.postMessage({ type: "ASM_LOGOUT" }, BRAND_AUDIT_URL);
-    }
+  async function handleCreate(input: CreateFullAuditInput) {
+    const audit = await create.mutateAsync(input);
+    navigate(`/growth/brand-audits/${audit.id}`);
   }
-
-  // Re-send auth whenever ASM user state changes (login/logout)
-  useEffect(() => {
-    if (!loading) sendAuthToIframe();
-  }, [user, loading]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!BRAND_AUDIT_URL) {
-    return (
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Topbar title="Brand Audits" />
-        <NotConfigured />
-      </div>
-    );
-  }
-
-  // Append ?embedded=1 so the Brand Audit app hides its own TopBar
-  const iframeSrc = `${BRAND_AUDIT_URL}?embedded=1`;
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-auto">
       <Topbar
         title="Brand Audits"
         actions={
-          <a
-            href={BRAND_AUDIT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Open Brand Audit in new tab"
-            className="hidden sm:inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Open in tab
-          </a>
+          !showForm ? (
+            <button
+              onClick={() => setShowForm(true)}
+              className="btn-primary flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              New Audit
+            </button>
+          ) : undefined
         }
       />
 
-      {/* Fills all height below the topbar */}
-      <div className="flex-1 relative overflow-hidden">
-        {loading && !loadError && <LoadingSkeleton />}
-
-        {loadError && <LoadError url={BRAND_AUDIT_URL} />}
-
-        {!loadError && (
-          <iframe
-            ref={iframeRef}
-            key={iframeSrc}
-            src={iframeSrc}
-            title="Brand Audits — powered by Propacity"
-            className={`w-full h-full border-0 transition-opacity duration-300 ${
-              loading ? "opacity-0" : "opacity-100"
-            }`}
-            onLoad={() => {
-              setLoading(false);
-              // Send auth immediately after iframe loads
-              sendAuthToIframe();
-            }}
-            onError={() => {
-              setLoading(false);
-              setLoadError(true);
-            }}
-            allow="same-origin"
+      <div className="p-6 flex-1">
+        {showForm ? (
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold text-slate-800 mb-6">
+              New Brand Audit
+            </p>
+            <CreateFullAuditForm
+              onSubmit={handleCreate}
+              onCancel={() => setShowForm(false)}
+              submitting={create.isPending}
+            />
+          </div>
+        ) : isLoading ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState error={error} onRetry={refetch} />
+        ) : !data || data.length === 0 ? (
+          <EmptyState
+            title="No brand audits yet"
+            description="Run a full AI-powered audit of a developer's digital presence."
           />
+        ) : (
+          <div className="card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50/60">
+                <tr>
+                  <th className="th">Brand</th>
+                  <th className="th">City</th>
+                  <th className="th">Status</th>
+                  <th className="th text-right">Score</th>
+                  <th className="th">Date</th>
+                  <th className="th" />
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((audit) => (
+                  <tr
+                    key={audit.id}
+                    className="hover:bg-slate-50/60 transition-colors"
+                  >
+                    <td className="td font-medium text-slate-900">
+                      {audit.developer?.brandName ?? "—"}
+                    </td>
+                    <td className="td text-slate-500">
+                      {audit.developer?.city ?? "—"}
+                    </td>
+                    <td className="td">
+                      <AuditStatusBadge status={audit.status} />
+                    </td>
+                    <td className="td text-right font-semibold tabular-nums">
+                      {audit.overallScore !== null ? audit.overallScore : "—"}
+                    </td>
+                    <td className="td text-slate-500 text-xs">
+                      {new Date(audit.auditDate).toLocaleDateString("en-IN")}
+                    </td>
+                    <td className="td text-right">
+                      <Link
+                        to={`/growth/brand-audits/${audit.id}`}
+                        className="text-xs font-semibold text-brand-600 hover:text-brand-800"
+                      >
+                        View →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
