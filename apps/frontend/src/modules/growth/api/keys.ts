@@ -18,4 +18,9 @@ export const growthKeys = {
   brandAudits: (filters?: object) =>
     [...growthKeys.all, "brand-audits", filters] as const,
   brandAudit: (id: string) => [...growthKeys.all, "brand-audits", id] as const,
+  fullAuditByProspect: (prospectId: string) =>
+    [...growthKeys.all, "full-audit-by-prospect", prospectId] as const,
+  fullAudits: (filters?: object) =>
+    [...growthKeys.all, "full-audits", filters] as const,
+  fullAudit: (id: string) => [...growthKeys.all, "full-audits", id] as const,
 };

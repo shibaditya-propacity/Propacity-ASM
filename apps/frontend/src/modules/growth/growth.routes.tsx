@@ -4,10 +4,19 @@ import { LoadingState } from "@/core/components/loading-state";
 
 const GrowthDashboardPage = lazy(() => import("./pages/growth-dashboard.page"));
 const GrowthWorkshopsPage = lazy(() => import("./pages/growth-workshops.page"));
-const GrowthWorkshopDetailPage = lazy(() => import("./pages/growth-workshop-detail.page"));
+const GrowthWorkshopDetailPage = lazy(
+  () => import("./pages/growth-workshop-detail.page"),
+);
 const GrowthProspectsPage = lazy(() => import("./pages/growth-prospects.page"));
-const GrowthProspectDetailPage = lazy(() => import("./pages/growth-prospect-detail.page"));
-const GrowthBrandAuditsPage = lazy(() => import("./pages/growth-brand-audits.page"));
+const GrowthProspectDetailPage = lazy(
+  () => import("./pages/growth-prospect-detail.page"),
+);
+const GrowthBrandAuditsPage = lazy(
+  () => import("./pages/growth-brand-audits.page"),
+);
+const GrowthBrandAuditDetailPage = lazy(
+  () => import("./pages/growth-brand-audit-detail.page"),
+);
 
 export const growthRoutes: RouteObject = {
   path: "growth",
@@ -57,6 +66,14 @@ export const growthRoutes: RouteObject = {
       element: (
         <Suspense fallback={<LoadingState />}>
           <GrowthBrandAuditsPage />
+        </Suspense>
+      ),
+    },
+    {
+      path: "brand-audits/:auditId",
+      element: (
+        <Suspense fallback={<LoadingState />}>
+          <GrowthBrandAuditDetailPage />
         </Suspense>
       ),
     },

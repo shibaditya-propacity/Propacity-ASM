@@ -207,7 +207,7 @@ function SidebarContent({
           <button
             onClick={onToggleCollapse}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex items-center justify-center w-full h-8 rounded-lg text-slate-500 hover:text-white hover:bg-white/5 transition-colors mt-2"
+            className="flex items-center justify-center w-full h-8 rounded-xl text-slate-600 hover:text-white hover:bg-white/6 transition-colors mt-2"
           >
             {collapsed ? (
               <ChevronRight className="w-4 h-4" />
@@ -267,7 +267,7 @@ function SidebarContent({
                 transition={{ duration: 0.15 }}
                 onClick={onLogout}
                 aria-label="Sign out"
-                className="text-slate-500 hover:text-white transition-colors shrink-0"
+                className="text-slate-600 hover:text-white transition-colors shrink-0 p-1 rounded-lg hover:bg-white/6"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </motion.button>
@@ -413,13 +413,22 @@ export function AppShell() {
         >
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-              <h2 className="font-heading text-base font-bold text-slate-900">
-                Schedule a Workshop
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <img
+                  src="/propacity-logo.png"
+                  alt="Propacity"
+                  width={22}
+                  height={22}
+                  className="rounded-md object-contain"
+                />
+                <h2 className="font-heading text-base font-bold text-slate-900">
+                  Schedule a Workshop
+                </h2>
+              </div>
               <button
                 onClick={() => setWorkshopModalOpen(false)}
                 aria-label="Close"
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
               >
                 <X className="w-4 h-4" />
               </button>
