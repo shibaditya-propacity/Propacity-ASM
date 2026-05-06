@@ -5,9 +5,10 @@ import { growthKeys } from "./keys";
 export function useDeleteWorkshop() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => apiClient.delete<void>(`/growth/workshops/${id}`),
+    mutationFn: (id: string) =>
+      apiClient.delete<void>(`/growth/workshops/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: growthKeys.workshops() });
+      queryClient.invalidateQueries({ queryKey: growthKeys.workshopsList() });
     },
   });
 }

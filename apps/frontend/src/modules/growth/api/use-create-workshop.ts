@@ -9,7 +9,7 @@ export function useCreateWorkshop() {
     mutationFn: (input: CreateWorkshopInput) =>
       apiClient.post<Workshop>("/growth/workshops", input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: growthKeys.workshops() });
+      queryClient.invalidateQueries({ queryKey: growthKeys.workshopsList() });
     },
   });
 }

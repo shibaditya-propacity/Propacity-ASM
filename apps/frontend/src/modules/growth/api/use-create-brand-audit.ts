@@ -9,7 +9,7 @@ export function useCreateBrandAudit() {
     mutationFn: (input: CreateBrandAuditInput) =>
       apiClient.post<BrandAudit>("/growth/brand-audits", input),
     onSuccess: (_, input) => {
-      queryClient.invalidateQueries({ queryKey: growthKeys.brandAudits() });
+      queryClient.invalidateQueries({ queryKey: growthKeys.brandAuditsList() });
       queryClient.invalidateQueries({
         queryKey: growthKeys.prospectBrandAudit(input.prospectId),
       });
