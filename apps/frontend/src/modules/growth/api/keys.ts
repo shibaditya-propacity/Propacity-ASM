@@ -1,5 +1,10 @@
 export const growthKeys = {
   all: ["growth"] as const,
+  // Prefix keys — use these in invalidateQueries so all filter variants are invalidated
+  workshopsList: () => [...growthKeys.all, "workshops"] as const,
+  prospectsList: () => [...growthKeys.all, "prospects"] as const,
+  brandAuditsList: () => [...growthKeys.all, "brand-audits"] as const,
+  // Full keys — use these in useQuery
   workshops: (filters?: object) =>
     [...growthKeys.all, "workshops", filters] as const,
   workshop: (id: string) => [...growthKeys.all, "workshops", id] as const,

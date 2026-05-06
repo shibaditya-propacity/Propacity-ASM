@@ -9,7 +9,7 @@ export function useUpdateWorkshop(id: string) {
     mutationFn: (input: UpdateWorkshopInput) =>
       apiClient.patch<Workshop>(`/growth/workshops/${id}`, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: growthKeys.workshops() });
+      queryClient.invalidateQueries({ queryKey: growthKeys.workshopsList() });
       queryClient.invalidateQueries({ queryKey: growthKeys.workshop(id) });
     },
   });
