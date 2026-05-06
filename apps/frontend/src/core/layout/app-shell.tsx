@@ -56,10 +56,29 @@ export function AppShell() {
       {/* ── Sidebar ── */}
       <aside
         style={{ width: sidebarW }}
-        className="shrink-0 flex flex-col bg-[#0F172A] transition-[width] duration-[250ms] ease-in-out z-20 relative"
+        className="shrink-0 flex flex-col bg-[#0F172A] transition-[width] duration-[250ms] ease-in-out z-20 relative overflow-visible"
       >
         {/* Subtle right-edge gradient glow */}
         <div className="pointer-events-none absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent" />
+
+        {/* ── Semicircle collapse toggle ── */}
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-full
+            w-5 h-10 flex items-center justify-center
+            bg-[#0F172A] rounded-r-full
+            border-t border-r border-b border-white/10
+            text-slate-500 hover:text-white
+            shadow-[3px_0_12px_rgba(0,0,0,0.35)]
+            transition-colors duration-150 z-30"
+        >
+          {collapsed ? (
+            <ChevronRight className="w-3 h-3 ml-0.5" />
+          ) : (
+            <ChevronLeft className="w-3 h-3" />
+          )}
+        </button>
 
         {/* Logo */}
         <div className="h-16 flex items-center border-b border-white/8 shrink-0 overflow-hidden px-4">
@@ -175,19 +194,6 @@ export function AppShell() {
               </li>
             ))}
           </ul>
-
-          {/* Collapse toggle */}
-          <button
-            onClick={() => setCollapsed((v) => !v)}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="flex items-center justify-center w-full h-8 rounded-xl text-slate-600 hover:text-white hover:bg-white/6 transition-colors mt-2"
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </button>
         </nav>
 
         {/* User section */}
