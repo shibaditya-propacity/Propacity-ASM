@@ -34,6 +34,10 @@ export function registerBrandAuditRoutes(router: Router): void {
   r.use(authGuard);
   r.use(tenantGuard);
 
+  // ── Brand lookup (pre-fill form) ──────────────────────────────────────────
+
+  r.get("/lookup", controller.lookupBrand);
+
   // ── Audit CRUD ─────────────────────────────────────────────────────────────
 
   r.post(

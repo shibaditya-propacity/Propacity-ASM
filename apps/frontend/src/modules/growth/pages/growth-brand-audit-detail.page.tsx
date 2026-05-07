@@ -1,6 +1,14 @@
 import { useParams, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Play, RefreshCw } from "lucide-react";
+import {
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  Radar,
+  ResponsiveContainer,
+  Tooltip,
+} from "recharts";
 import { Topbar } from "@/core/layout/topbar";
 import { LoadingState } from "@/core/components/loading-state";
 import { ErrorState } from "@/core/components/error-state";
@@ -13,7 +21,64 @@ import {
   getScoreTier,
   getScoreTierLabel,
   getScoreTierClass,
+  type FullAuditDimension,
 } from "../brand-audit.types";
+
+const DIMENSION_LABELS: Record<string, string> = {
+  D1: "Brand Overview",
+  D2: "Website & SEO",
+  D3: "Social Media",
+  D4: "Paid Media",
+  D5: "Visual Identity",
+  D6: "Collateral",
+  D7: "Reputation",
+  D8: "Technology",
+  D9: "Competitors",
+  D10: "Promoter",
+};
+
+function AuditRadarChart({ dimensions }: { dimensions: FullAuditDimension[] }) {
+  const scored = dimensions.filter((d) => d.score !== null);
+  if (scored.length < 3) return null;
+
+  const data = scored.map((d) => ({
+    subject: DIMENSION_LABELS[d.code] ?? d.code,
+    score: d.score ?? 0,
+    fullMark: 100,
+  }));
+
+  return (
+    <div className="card card-pad">
+      <p className="text-xs font-semibold text-slate-600 mb-4">
+        Score Breakdown
+      </p>
+      <ResponsiveContainer width="100%" height={300}>
+        <RadarChart
+          data={data}
+          margin={{ top: 10, right: 30, bottom: 10, left: 30 }}
+        >
+          <PolarGrid stroke="#e2e8f0" />
+          <PolarAngleAxis
+            dataKey="subject"
+            tick={{ fontSize: 10, fill: "#64748b" }}
+          />
+          <Radar
+            name="Score"
+            dataKey="score"
+            stroke="#2563eb"
+            fill="#2563eb"
+            fillOpacity={0.15}
+            strokeWidth={2}
+          />
+          <Tooltip
+            formatter={(value: number) => [`${value}`, "Score"]}
+            contentStyle={{ fontSize: 12 }}
+          />
+        </RadarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export default function GrowthBrandAuditDetailPage() {
   const { auditId = "" } = useParams<{ auditId: string }>();
@@ -146,6 +211,11 @@ export default function GrowthBrandAuditDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Radar chart — shown when ≥3 dimensions have scores */}
+        {sortedDimensions.filter((d) => d.score !== null).length >= 3 && (
+          <AuditRadarChart dimensions={sortedDimensions} />
+        )}
 
         {/* Run progress stream */}
         {(running || events.length > 0) && (

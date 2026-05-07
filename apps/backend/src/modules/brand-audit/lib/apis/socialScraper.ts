@@ -1,4 +1,4 @@
-import { fetchWithRetry } from "@/lib/fetchWithRetry";
+import { fetchWithRetry } from "../fetchWithRetry";
 
 const SOCIAL_PATTERNS: Record<string, RegExp> = {
   instagram: /(?:https?:\/\/)?(?:www\.)?instagram\.com\/([a-zA-Z0-9_.]+)\/?/,
@@ -82,7 +82,7 @@ export async function scrapeSocialLinks(
     let jMatch: RegExpExecArray | null;
     while ((jMatch = jsonLdRe.exec(html)) !== null) {
       try {
-        const parsed = JSON.parse(jMatch[1]);
+        const parsed = JSON.parse(jMatch[1] ?? "null");
         const entries = Array.isArray(parsed) ? parsed : [parsed];
         for (const entry of entries) {
           const sameAs: string[] = Array.isArray(entry?.sameAs)
@@ -103,7 +103,7 @@ export async function scrapeSocialLinks(
     const hrefRe = /href=["']([^"']+)["']/gi;
     let hMatch: RegExpExecArray | null;
     while ((hMatch = hrefRe.exec(html)) !== null) {
-      const href = hMatch[1];
+      const href = hMatch[1] ?? "";
       if (!href.startsWith("http")) continue;
       if (
         /instagram\.com|linkedin\.com|facebook\.com|youtube\.com|twitter\.com|x\.com|wa\.me|whatsapp\.com/.test(

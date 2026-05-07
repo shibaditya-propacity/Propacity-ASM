@@ -13,9 +13,9 @@ function parseCount(raw: string): number | null {
   const cleaned = raw.replace(/,/g, "").replace(/\s/g, "").trim();
   const m = cleaned.match(/^([\d.]+)\s*([KkMmBb]?)$/);
   if (!m) return null;
-  const n = parseFloat(m[1]);
+  const n = parseFloat(m[1] ?? "");
   if (isNaN(n)) return null;
-  const suffix = m[2].toLowerCase();
+  const suffix = (m[2] ?? "").toLowerCase();
   if (suffix === "k") return Math.round(n * 1_000);
   if (suffix === "m") return Math.round(n * 1_000_000);
   if (suffix === "b") return Math.round(n * 1_000_000_000);
@@ -25,7 +25,7 @@ function parseCount(raw: string): number | null {
 function extractNumber(text: string, pattern: RegExp): number | null {
   const m = text.match(pattern);
   if (!m) return null;
-  return parseCount(m[1]);
+  return parseCount(m[1] ?? "");
 }
 
 // ── Instagram ──────────────────────────────────────────────────────────────────
@@ -393,7 +393,7 @@ export async function getLinkedInInsights(
           text.match(/([\d,]+)\+?\s*employees?/i);
         if (empMatch) {
           // For ranges take the lower bound; for "+" take as-is
-          result.employees = parseCount(empMatch[1].replace(/,/g, ""));
+          result.employees = parseCount((empMatch[1] ?? "").replace(/,/g, ""));
         }
       }
 
@@ -412,7 +412,7 @@ export async function getLinkedInInsights(
       // Industry — often in snippet: "Real estate · 501-1,000 employees"
       if (!result.industry) {
         const indMatch = snippet.match(/^([^·\n]{5,40})\s*·/);
-        if (indMatch) result.industry = indMatch[1].trim();
+        if (indMatch) result.industry = (indMatch[1] ?? "").trim();
       }
     }
 
@@ -525,7 +525,7 @@ export async function getPromoterLinkedInInsights(
         const nameMatch = item.title.match(
           /^([^|–-]+?)(?:\s*[-–|]|\s+on LinkedIn)/i,
         );
-        if (nameMatch) result.fullName = nameMatch[1].trim();
+        if (nameMatch) result.fullName = (nameMatch[1] ?? "").trim();
       }
 
       // Headline — "Title at Company" pattern after name in title
@@ -533,7 +533,7 @@ export async function getPromoterLinkedInInsights(
         const hlMatch = item.title.match(
           /[-–|]\s*(.+?)(?:\s*[-–|]\s*LinkedIn|$)/i,
         );
-        if (hlMatch) result.headline = hlMatch[1].trim();
+        if (hlMatch) result.headline = (hlMatch[1] ?? "").trim();
       }
 
       // Followers — "12,500 followers" or "12.5K followers"
@@ -547,7 +547,7 @@ export async function getPromoterLinkedInInsights(
       // Connections — "500+ connections"
       if (!result.connections) {
         const connMatch = text.match(/([\d,]+\+?)\s*connections?/i);
-        if (connMatch) result.connections = connMatch[1];
+        if (connMatch) result.connections = connMatch[1] ?? null;
       }
 
       // About / bio — from the snippet when it's not just stats
@@ -566,9 +566,9 @@ export async function getPromoterLinkedInInsights(
           /\b([A-Z][^.!?]+?)\s+at\s+([A-Z][^.!?]+?)(?:\s*[·|]|$)/,
         );
         if (roleMatch) {
-          result.currentRole = roleMatch[1].trim();
+          result.currentRole = (roleMatch[1] ?? "").trim();
           if (!result.currentCompany)
-            result.currentCompany = roleMatch[2].trim();
+            result.currentCompany = (roleMatch[2] ?? "").trim();
         }
       }
     }
@@ -752,7 +752,7 @@ export async function getYouTubeInsights(
         .filter((d) => !isNaN(d))
         .sort((a, b) => b - a);
       if (dates.length >= 2) {
-        const spanMs = dates[0] - dates[dates.length - 1];
+        const spanMs = (dates[0] ?? 0) - (dates[dates.length - 1] ?? 0);
         const spanMonths = spanMs / (1000 * 60 * 60 * 24 * 30);
         if (spanMonths > 0) {
           result.uploadFrequencyPerMonth =

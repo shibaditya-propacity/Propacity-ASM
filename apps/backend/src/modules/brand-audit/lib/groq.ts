@@ -11,7 +11,7 @@ export async function analyzeWithGroq(
   prompt: string,
   systemPrompt?: string,
 ): Promise<string> {
-  const { analyzeWithClaude } = await import("@/lib/anthropic");
+  const { analyzeWithClaude } = await import("./anthropic");
   return analyzeWithClaude(prompt, systemPrompt);
 }
 
@@ -19,7 +19,7 @@ export async function extractWithGroq(
   prompt: string,
   _maxTokens = 256,
 ): Promise<string> {
-  const { analyzeWithClaude } = await import("@/lib/anthropic");
+  const { analyzeWithClaude } = await import("./anthropic");
   return analyzeWithClaude(prompt);
 }
 

@@ -2573,4 +2573,174 @@ Rules:
       });
     }
   };
+
+  // ── Brand lookup (pre-fill form) ───────────────────────────────────────────
+  // GET /brand-audit/lookup?brandName=X&city=Y
+  // Returns brand metadata from Serper + PDL + social scraper.
+
+  lookupBrand = async (req: Request, res: Response): Promise<void> => {
+    const { brandName, city } = req.query as {
+      brandName?: string;
+      city?: string;
+    };
+
+    if (!brandName?.trim()) {
+      res
+        .status(400)
+        .json({
+          ok: false,
+          error: { code: "VALIDATION_ERROR", message: "brandName required" },
+        });
+      return;
+    }
+
+    try {
+      const { getSerpResults, getSocialProfileUrl } =
+        await import("./lib/apis/dataForSeo");
+      const { enrichCompany, extractCompanyData } =
+        await import("./lib/apis/pdl");
+      const { scrapeSocialLinks } = await import("./lib/apis/socialScraper");
+
+      // 1. Find brand website via Serper
+      const query = city
+        ? `${brandName} ${city} real estate developer`
+        : `${brandName} real estate developer India`;
+      const serpData = await getSerpResults(query);
+
+      let domain: string | null = null;
+      let websiteUrl: string | null = null;
+
+      if (serpData?.organic && Array.isArray(serpData.organic)) {
+        const results = serpData.organic as Array<{
+          link: string;
+          title: string;
+        }>;
+        const skipPatterns =
+          /99acres|housing\.com|magicbricks|justdial|sulekha|indiamart|wikipedia|linkedin\.com\/(jobs|company\/search)/i;
+        const nameParts = brandName
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((s) => s.length > 2);
+
+        for (const r of results) {
+          if (!r.link) continue;
+          try {
+            const urlObj = new URL(r.link);
+            const host = urlObj.hostname.replace("www.", "");
+            if (skipPatterns.test(host)) continue;
+            const titleLower = r.title.toLowerCase();
+            const hostLower = host.toLowerCase();
+            const isMatch = nameParts.some(
+              (part) => hostLower.includes(part) || titleLower.includes(part),
+            );
+            if (isMatch) {
+              websiteUrl = `https://${host}`;
+              domain = host;
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+
+        // Fallback: first non-aggregator result
+        if (!domain) {
+          for (const r of results.slice(0, 5)) {
+            if (!r.link) continue;
+            try {
+              const urlObj = new URL(r.link);
+              const host = urlObj.hostname.replace("www.", "");
+              if (!skipPatterns.test(host)) {
+                websiteUrl = `https://${host}`;
+                domain = host;
+                break;
+              }
+            } catch {
+              continue;
+            }
+          }
+        }
+      }
+
+      // 2. Logo via Clearbit
+      const logo = domain ? `https://logo.clearbit.com/${domain}` : null;
+
+      // 3. Enrich via PDL/company-enrich
+      let industry: string | null = null;
+      let description: string | null = null;
+      let founded: number | null = null;
+      let social: Record<string, string | null> = {
+        linkedin: null,
+        instagram: null,
+        facebook: null,
+        youtube: null,
+        twitter: null,
+      };
+
+      if (domain) {
+        const pdl = await enrichCompany(domain);
+        if (pdl) {
+          const extracted = extractCompanyData(pdl);
+          industry = extracted.industry ?? null;
+          description = extracted.summary ?? null;
+          founded = extracted.founded ?? null;
+          social = {
+            linkedin: extracted.socialLinks.linkedin ?? null,
+            instagram: extracted.socialLinks.instagram ?? null,
+            facebook: extracted.socialLinks.facebook ?? null,
+            youtube: extracted.socialLinks.youtube ?? null,
+            twitter: extracted.socialLinks.twitter ?? null,
+          };
+        }
+      }
+
+      // 4. Scrape social links from homepage if PDL missed them
+      if (websiteUrl) {
+        const scraped = await scrapeSocialLinks(websiteUrl);
+        social = {
+          linkedin: social.linkedin ?? scraped.linkedin,
+          instagram: social.instagram ?? scraped.instagram,
+          facebook: social.facebook ?? scraped.facebook,
+          youtube: social.youtube ?? scraped.youtube,
+          twitter: social.twitter ?? scraped.twitter,
+        };
+      }
+
+      // 5. Search social profiles via Serper for remaining gaps
+      const [igUrl, liUrl] = await Promise.allSettled([
+        !social.instagram
+          ? getSocialProfileUrl(brandName, "instagram.com")
+          : Promise.resolve(null),
+        !social.linkedin
+          ? getSocialProfileUrl(brandName, "linkedin.com/company")
+          : Promise.resolve(null),
+      ]);
+      if (!social.instagram && igUrl.status === "fulfilled")
+        social.instagram = igUrl.value;
+      if (!social.linkedin && liUrl.status === "fulfilled")
+        social.linkedin = liUrl.value;
+
+      ok(res, {
+        brandName,
+        domain,
+        websiteUrl,
+        logo,
+        industry,
+        description,
+        founded,
+        social,
+      });
+    } catch (error) {
+      console.error(
+        "Brand lookup error:",
+        error instanceof Error ? error.message : error,
+      );
+      res
+        .status(500)
+        .json({
+          ok: false,
+          error: { code: "LOOKUP_FAILED", message: "Brand lookup failed" },
+        });
+    }
+  };
 }

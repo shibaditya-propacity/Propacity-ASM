@@ -1,22 +1,26 @@
-import axios from "axios";
-import { withRetry } from "@/lib/fetchWithRetry";
-import type {
-  ApifyInstagramProfile,
-  ApifyInstagramPost,
-} from "@/types/apiResponses";
+import { fetchWithRetry, withRetry } from "../fetchWithRetry";
+import type { ApifyInstagramProfile, ApifyInstagramPost } from "../api-types";
 
 const APIFY_URL =
   "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items";
 
 async function apifyRun<T>(input: Record<string, unknown>): Promise<T[]> {
-  const response = await withRetry(() =>
-    axios.post<T[]>(APIFY_URL, input, {
-      timeout: 15000,
-      params: { token: process.env.APIFY_API_KEY },
-      headers: { "Content-Type": "application/json" },
-    }),
+  const token = process.env.APIFY_API_KEY ?? "";
+  const url = `${APIFY_URL}?token=${encodeURIComponent(token)}`;
+  const res = await withRetry(() =>
+    fetchWithRetry(
+      url,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      },
+      2,
+      15000,
+    ),
   );
-  const data = response.data || [];
+  if (!res.ok) throw new Error(`Apify error: ${res.status}`);
+  const data = (await res.json()) as T[];
   // Filter out Apify error objects (e.g. { error: 'no_items', errorDescription: '...' })
   return data.filter((item) => !(item as Record<string, unknown>).error);
 }
@@ -79,10 +83,10 @@ export function calculateInstagramMetrics(
 
   let postsPerWeek = 0;
   if (sortedPosts.length >= 2) {
-    const firstTs = new Date(
-      sortedPosts[sortedPosts.length - 1].timestamp,
-    ).getTime();
-    const lastTs = new Date(sortedPosts[0].timestamp).getTime();
+    const first = sortedPosts[sortedPosts.length - 1];
+    const last = sortedPosts[0];
+    const firstTs = new Date(first?.timestamp ?? 0).getTime();
+    const lastTs = new Date(last?.timestamp ?? 0).getTime();
     const weeksDiff = (lastTs - firstTs) / (7 * 24 * 3600 * 1000);
     postsPerWeek = weeksDiff > 0 ? sortedPosts.length / weeksDiff : 0;
   }
