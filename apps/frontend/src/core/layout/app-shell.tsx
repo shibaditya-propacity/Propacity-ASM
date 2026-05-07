@@ -14,6 +14,7 @@ import {
   Menu,
 } from "lucide-react";
 import { useAuth } from "@/core/auth/use-auth";
+import { useAuditStatusStore } from "@/core/store/audit-status.store";
 import { WorkshopForm } from "@/modules/growth/components/workshop-form";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
@@ -68,6 +69,8 @@ function SidebarContent({
   userRole,
   onClose,
 }: SidebarContentProps) {
+  const runningAuditId = useAuditStatusStore((s) => s.runningAuditId);
+
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -178,12 +181,40 @@ function SidebarContent({
                       animate={{ opacity: 1, width: "auto" }}
                       exit={{ opacity: 0, width: 0 }}
                       transition={{ duration: 0.18, ease: "easeInOut" }}
-                      className="whitespace-nowrap overflow-hidden"
+                      className="whitespace-nowrap overflow-hidden flex-1"
                     >
                       {label}
                     </motion.span>
                   )}
                 </AnimatePresence>
+                {/* Audit-in-progress pulse badge — Brand Audits only */}
+                {label === "Brand Audits" && runningAuditId && (
+                  <AnimatePresence initial={false}>
+                    {!collapsed ? (
+                      <motion.span
+                        key="audit-badge-full"
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 shrink-0"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                        <span className="text-[9px] font-semibold text-amber-400 whitespace-nowrap">
+                          In progress
+                        </span>
+                      </motion.span>
+                    ) : (
+                      <motion.span
+                        key="audit-badge-dot"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-400 animate-pulse"
+                      />
+                    )}
+                  </AnimatePresence>
+                )}
               </NavLink>
 
               {/* Tooltip — only when collapsed */}

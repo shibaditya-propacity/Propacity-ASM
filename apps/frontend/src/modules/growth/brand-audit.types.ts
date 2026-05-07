@@ -58,9 +58,11 @@ export interface FullAuditDeveloper {
   websiteUrl: string | null;
   instagramHandle: string | null;
   facebookUrl: string | null;
+  linkedinUrl: string | null;
   promoterName: string | null;
   microMarkets: string[];
   targetSegments: string[];
+  competitors: string[];
 }
 
 export interface FullAudit {

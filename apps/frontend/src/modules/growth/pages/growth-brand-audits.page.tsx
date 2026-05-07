@@ -5,6 +5,7 @@ import { Topbar } from "@/core/layout/topbar";
 import { LoadingState } from "@/core/components/loading-state";
 import { ErrorState } from "@/core/components/error-state";
 import { EmptyState } from "@/core/components/empty-state";
+import { useAuditStatusStore } from "@/core/store/audit-status.store";
 import { useFullAudits } from "../api/use-full-audits";
 import { useCreateFullAudit } from "../api/use-create-full-audit";
 import { AuditStatusBadge } from "../components/audit-status-badge";
@@ -16,6 +17,14 @@ export default function GrowthBrandAuditsPage() {
   const [showForm, setShowForm] = useState(false);
   const { data, isLoading, isError, error, refetch } = useFullAudits();
   const create = useCreateFullAudit();
+  const runningAuditId = useAuditStatusStore((s) => s.runningAuditId);
+
+  // Block new audits if one is running (current session or DB state)
+  const hasActiveAudit =
+    runningAuditId !== null ||
+    (data ?? []).some(
+      (a) => a.status === "COLLECTING" || a.status === "ANALYZING",
+    );
 
   async function handleCreate(input: CreateFullAuditInput) {
     const audit = await create.mutateAsync(input);
@@ -28,13 +37,29 @@ export default function GrowthBrandAuditsPage() {
         title="Brand Audits"
         actions={
           !showForm ? (
-            <button
-              onClick={() => setShowForm(true)}
-              className="btn-primary flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              New Audit
-            </button>
+            <div className="relative group/new-audit">
+              <button
+                onClick={() => {
+                  if (!hasActiveAudit) setShowForm(true);
+                }}
+                disabled={hasActiveAudit}
+                className="btn-primary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Plus className="w-4 h-4" />
+                New Audit
+              </button>
+              {hasActiveAudit && (
+                <div
+                  className="absolute right-0 top-full mt-2 z-50
+                    px-3 py-2 bg-slate-800 border border-white/10 text-white text-xs rounded-lg
+                    whitespace-nowrap pointer-events-none shadow-xl
+                    opacity-0 group-hover/new-audit:opacity-100 transition-opacity duration-150"
+                >
+                  An audit is already in progress
+                  <span className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800" />
+                </div>
+              )}
+            </div>
           ) : undefined
         }
       />
