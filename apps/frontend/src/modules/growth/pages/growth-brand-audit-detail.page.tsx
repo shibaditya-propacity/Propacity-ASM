@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Play,
+  Square,
   RefreshCw,
   ExternalLink,
   TrendingUp,
@@ -38,6 +39,7 @@ import { ErrorState } from "@/core/components/error-state";
 import { useAuditStatusStore } from "@/core/store/audit-status.store";
 import { useFullAudit } from "../api/use-full-audit";
 import { useRunAudit } from "../api/use-run-audit";
+import { useCancelAudit } from "../api/use-cancel-audit";
 import { useSaveManualOverride } from "../api/use-save-manual-override";
 import { growthKeys } from "../api/keys";
 import { AuditStatusBadge } from "../components/audit-status-badge";
@@ -1077,7 +1079,15 @@ export default function GrowthBrandAuditDetailPage() {
     events,
     error: runError,
     run,
+    stop,
   } = useRunAudit(auditId, invalidate);
+
+  const cancelMutation = useCancelAudit(auditId);
+
+  function handleStop() {
+    stop();
+    cancelMutation.mutate();
+  }
 
   const handleToggle = useCallback((code: string) => {
     setOpenSection((prev) => (prev === code ? null : code));
@@ -1119,30 +1129,39 @@ export default function GrowthBrandAuditDetailPage() {
             >
               <ArrowLeft className="w-4 h-4" /> Back
             </Link>
-            {(canRun || inProgress) && (
-              <div className="relative group/run-btn">
-                <button
-                  onClick={() => void run()}
-                  disabled={inProgress || anotherRunning}
-                  className="btn-primary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {inProgress ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Running…
-                    </>
-                  ) : (
-                    <>
-                      <Play className="w-4 h-4" /> Launch Full Audit
-                    </>
+            {running ? (
+              <button
+                onClick={handleStop}
+                className="btn flex items-center gap-1.5 border-red-200 text-red-700 hover:bg-red-50"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" /> Stop Audit
+              </button>
+            ) : (
+              (canRun || inProgress) && (
+                <div className="relative group/run-btn">
+                  <button
+                    onClick={() => void run()}
+                    disabled={inProgress || anotherRunning}
+                    className="btn-primary flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {inProgress ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Running…
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4" /> Launch Full Audit
+                      </>
+                    )}
+                  </button>
+                  {anotherRunning && !inProgress && (
+                    <div className="absolute right-0 top-full mt-2 z-50 px-3 py-2 bg-slate-800 border border-white/10 text-white text-xs rounded-lg whitespace-nowrap pointer-events-none shadow-xl opacity-0 group-hover/run-btn:opacity-100 transition-opacity duration-150">
+                      An audit is already in progress
+                      <span className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800" />
+                    </div>
                   )}
-                </button>
-                {anotherRunning && !inProgress && (
-                  <div className="absolute right-0 top-full mt-2 z-50 px-3 py-2 bg-slate-800 border border-white/10 text-white text-xs rounded-lg whitespace-nowrap pointer-events-none shadow-xl opacity-0 group-hover/run-btn:opacity-100 transition-opacity duration-150">
-                    An audit is already in progress
-                    <span className="absolute bottom-full right-4 border-4 border-transparent border-b-slate-800" />
-                  </div>
-                )}
-              </div>
+                </div>
+              )
             )}
           </div>
         }
