@@ -1,4 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
 import { ok, created } from "@/core/http/response";
 import { BrandAuditService } from "./brand-audit.service";
 import { BrandAuditRepository } from "./brand-audit.repository";
@@ -11,6 +14,8 @@ import type {
   LinkProspectInput,
 } from "./brand-audit.dto";
 import { prisma } from "@/core/prisma/client";
+
+const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 
 // ── Shared helpers (ported from Next.js _shared.ts) ───────────────────────────
 
@@ -296,6 +301,73 @@ export class BrandAuditController {
     try {
       const result = await this.service.backfillProspectLinks(req.tenant.id);
       ok(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ── Upload collateral PDF ─────────────────────────────────────────────────
+
+  uploadCollateral = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { id } = req.params as { id: string };
+      const tenantId = req.tenant.id;
+
+      const body = req.body as {
+        fileData?: string;
+        fileName?: string;
+        size?: number;
+      };
+
+      if (!body.fileData || !body.fileName) {
+        res.status(400).json({ error: "fileData and fileName are required" });
+        return;
+      }
+
+      const MAX_BYTES = 5 * 1024 * 1024;
+      const rawSize = body.size ?? 0;
+      if (rawSize > MAX_BYTES) {
+        res.status(400).json({ error: "File must be 5 MB or smaller" });
+        return;
+      }
+
+      const ext = path.extname(body.fileName).toLowerCase();
+      if (ext !== ".pdf") {
+        res.status(400).json({ error: "Only PDF files are allowed" });
+        return;
+      }
+
+      await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+
+      const diskName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}.pdf`;
+      const filePath = path.join(UPLOADS_DIR, diskName);
+
+      // Strip data-URL prefix if present (e.g. "data:application/pdf;base64,")
+      const base64 = body.fileData.includes(",")
+        ? body.fileData.split(",")[1]!
+        : body.fileData;
+
+      await fs.promises.writeFile(filePath, Buffer.from(base64, "base64"));
+
+      const host = `${req.protocol}://${req.get("host")}`;
+      const url = `${host}/uploads/${diskName}`;
+
+      const asset = {
+        type: "collateral_pdf",
+        fileName: diskName,
+        originalName: body.fileName,
+        size: rawSize,
+        uploadedAt: new Date().toISOString(),
+        url,
+      };
+
+      await this.repo.addAsset(tenantId, id, asset);
+
+      ok(res, asset);
     } catch (err) {
       next(err);
     }

@@ -1,1 +1,0 @@
-import{j as r}from"./index-Wi3w9d1g.js";import{C as t}from"./chip-CEs_fp7M.js";function n(e){switch(e){case"Upcoming":return"blue";case"Live":return"emerald";case"Completed":return"slate";case"Cancelled":return"red";default:return"slate"}}function o({status:e}){return r.jsx(t,{tone:n(e),children:e})}export{o as W};

@@ -24,6 +24,7 @@ export interface FullAuditItem {
 export interface FullAuditFindings {
   score?: number;
   summary?: string;
+  competitors?: string[];
   criticalFlags?: string[];
   strengths?: string[];
   quickWins?: string[];
@@ -59,10 +60,63 @@ export interface FullAuditDeveloper {
   instagramHandle: string | null;
   facebookUrl: string | null;
   linkedinUrl: string | null;
+  youtubeUrl: string | null;
   promoterName: string | null;
   microMarkets: string[];
   targetSegments: string[];
   competitors: string[];
+}
+
+export interface YouTubeVideoData {
+  videoId: string;
+  title: string;
+  publishedAt: string;
+  viewCount: number | null;
+  thumbnailUrl: string;
+  videoUrl: string;
+}
+
+export interface YouTubeData {
+  channelUrl: string;
+  channelName: string | null;
+  description: string | null;
+  subscribers: number | null;
+  totalVideos: number | null;
+  totalViews: number | null;
+  avgViewsPerVideo: number | null;
+  uploadFrequencyPerMonth: number | null;
+  recentVideos: YouTubeVideoData[];
+}
+
+export interface DiscoveredCompetitor {
+  name: string;
+  link: string;
+  domain: string;
+  snippet?: string;
+  address?: string;
+  rating?: number;
+  source: "organic" | "places";
+}
+
+export interface AuditCollectedData {
+  logoUrl?: string | null;
+  screenshotUrl?: string | null;
+  youtubeData?: YouTubeData | null;
+  competitorData?: {
+    competitors: DiscoveredCompetitor[];
+    keywords: string[];
+    collectedAt: string;
+  } | null;
+  [key: string]: unknown;
+}
+
+export interface CollateralAsset {
+  type: "collateral_pdf";
+  fileName: string;
+  originalName: string;
+  size: number;
+  uploadedAt: string;
+  url: string;
 }
 
 export interface FullAudit {
@@ -76,10 +130,10 @@ export interface FullAudit {
   knownRedFlags: string | null;
   overallScore: number | null;
   status: AuditStatus;
-  collectedData: unknown;
+  collectedData: AuditCollectedData | null;
   dataSourceStatus: { collected: string[]; failed: string[] } | null;
   dimensions: FullAuditDimension[];
-  assets: unknown;
+  assets: CollateralAsset[];
   manualOverrides: unknown;
   createdAt: string;
   updatedAt: string;

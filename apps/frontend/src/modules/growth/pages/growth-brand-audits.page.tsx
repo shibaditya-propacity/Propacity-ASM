@@ -10,7 +10,35 @@ import { useFullAudits } from "../api/use-full-audits";
 import { useCreateFullAudit } from "../api/use-create-full-audit";
 import { AuditStatusBadge } from "../components/audit-status-badge";
 import { CreateFullAuditForm } from "../components/create-full-audit-form";
-import type { CreateFullAuditInput } from "../brand-audit.types";
+import type { CreateFullAuditInput, FullAudit } from "../brand-audit.types";
+
+function AuditBrandCell({ audit }: { audit: FullAudit }) {
+  const [imgError, setImgError] = useState(false);
+  const dev = audit.developer;
+  const cd = audit.collectedData;
+  const logoUrl =
+    cd?.logoUrl ??
+    (dev?.domain ? `https://logo.clearbit.com/${dev.domain}` : null);
+  const name = dev?.brandName ?? "—";
+
+  return (
+    <div className="flex items-center gap-2.5">
+      {!imgError && logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={name}
+          className="w-7 h-7 rounded-md object-contain bg-slate-50 border border-slate-100 p-0.5 shrink-0"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className="w-7 h-7 rounded-md bg-brand-500/10 border border-brand-200 flex items-center justify-center text-xs font-bold text-brand-600 shrink-0">
+          {name[0]?.toUpperCase() ?? "?"}
+        </div>
+      )}
+      <span className="font-medium text-slate-900 truncate">{name}</span>
+    </div>
+  );
+}
 
 export default function GrowthBrandAuditsPage() {
   const navigate = useNavigate();
@@ -104,8 +132,8 @@ export default function GrowthBrandAuditsPage() {
                     key={audit.id}
                     className="hover:bg-slate-50/60 transition-colors"
                   >
-                    <td className="td font-medium text-slate-900">
-                      {audit.developer?.brandName ?? "—"}
+                    <td className="td">
+                      <AuditBrandCell audit={audit} />
                     </td>
                     <td className="td text-slate-500">
                       {audit.developer?.city ?? "—"}

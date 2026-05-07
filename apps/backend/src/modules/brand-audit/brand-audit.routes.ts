@@ -79,6 +79,12 @@ export function registerBrandAuditRoutes(router: Router): void {
   );
 
   r.post(
+    "/audits/:id/collateral-upload",
+    validate({ params: IdParamSchema }),
+    controller.uploadCollateral,
+  );
+
+  r.post(
     "/audits/:id/link-prospect",
     validate({ params: IdParamSchema, body: LinkProspectSchema }),
     controller.linkAuditToProspect,
