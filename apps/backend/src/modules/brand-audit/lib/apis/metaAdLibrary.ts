@@ -112,7 +112,7 @@ export function analyzeMetaAds(ads: MetAPIAd[]) {
     return tB - tA;
   });
 
-  const lastAdDate = sorted[0].creation_time;
+  const lastAdDate = sorted[0]?.creation_time;
   const daysSinceLastAd = lastAdDate
     ? Math.floor((Date.now() - new Date(lastAdDate).getTime()) / 86_400_000)
     : null;

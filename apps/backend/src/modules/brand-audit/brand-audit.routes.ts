@@ -34,6 +34,10 @@ export function registerBrandAuditRoutes(router: Router): void {
   r.use(authGuard);
   r.use(tenantGuard);
 
+  // ── Brand lookup (pre-fill form) ──────────────────────────────────────────
+
+  r.get("/lookup", controller.lookupBrand);
+
   // ── Audit CRUD ─────────────────────────────────────────────────────────────
 
   r.post(
@@ -72,6 +76,12 @@ export function registerBrandAuditRoutes(router: Router): void {
     "/audits/:id/manual-input",
     validate({ params: IdParamSchema, body: ManualInputSchema }),
     controller.updateManualOverrides,
+  );
+
+  r.post(
+    "/audits/:id/collateral-upload",
+    validate({ params: IdParamSchema }),
+    controller.uploadCollateral,
   );
 
   r.post(

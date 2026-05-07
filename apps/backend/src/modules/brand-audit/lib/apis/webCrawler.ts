@@ -1,5 +1,5 @@
-import axios from "axios";
-import type { WebCrawlerPage } from "@/types/apiResponses";
+import { fetchWithRetry } from "../fetchWithRetry";
+import type { WebCrawlerPage } from "../api-types";
 
 // ── Crawl4AI self-hosted server ────────────────────────────────────────────────
 // Run locally with: docker run -d -p 11235:11235 --shm-size=1g unclecode/crawl4ai:latest
@@ -7,31 +7,53 @@ import type { WebCrawlerPage } from "@/types/apiResponses";
 
 const CRAWL4AI_BASE = process.env.CRAWL4AI_BASE_URL || "http://localhost:11235";
 
-const c4aiClient = axios.create({
-  baseURL: CRAWL4AI_BASE,
-  timeout: 30000,
-  headers: { "Content-Type": "application/json" },
-});
-
 // ── Crawl4AI primary crawler ───────────────────────────────────────────────────
 
 async function crawlWithCrawl4AI(
   websiteUrl: string,
 ): Promise<WebCrawlerPage | null> {
   try {
-    const response = await c4aiClient.post("/md", { url: websiteUrl });
-    const data = response.data;
+    const res = await fetchWithRetry(
+      `${CRAWL4AI_BASE}/md`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: websiteUrl }),
+      },
+      2,
+      30000,
+    );
+
+    if (!res.ok) {
+      console.warn(
+        "[webCrawler] Crawl4AI returned status",
+        res.status,
+        "for",
+        websiteUrl,
+      );
+      return null;
+    }
+
+    const data = (await res.json()) as unknown;
 
     // Handle multiple possible response shapes from Crawl4AI
     let markdown: string = "";
     if (typeof data === "string") {
       markdown = data;
-    } else if (typeof data?.markdown === "string") {
-      markdown = data.markdown;
-    } else if (typeof data?.result?.markdown === "string") {
-      markdown = data.result.markdown;
-    } else if (typeof data?.content === "string") {
-      markdown = data.content;
+    } else if (
+      typeof (data as Record<string, unknown>)?.markdown === "string"
+    ) {
+      markdown = (data as Record<string, unknown>).markdown as string;
+    } else if (
+      typeof (
+        (data as Record<string, unknown>)?.result as Record<string, unknown>
+      )?.markdown === "string"
+    ) {
+      markdown = (
+        (data as Record<string, unknown>).result as Record<string, unknown>
+      ).markdown as string;
+    } else if (typeof (data as Record<string, unknown>)?.content === "string") {
+      markdown = (data as Record<string, unknown>).content as string;
     }
 
     if (!markdown || markdown.length < 100) {
@@ -84,19 +106,23 @@ async function fetchWebsiteDirect(
   websiteUrl: string,
 ): Promise<WebCrawlerPage | null> {
   try {
-    const response = await axios.get<string>(websiteUrl, {
-      timeout: 20000,
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
+    const res = await fetchWithRetry(
+      websiteUrl,
+      {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+        },
       },
-      maxRedirects: 5,
-    });
+      2,
+      20000,
+    );
 
-    const html = response.data as string;
+    if (!res.ok) return null;
+    const html = await res.text();
 
     // Title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
@@ -120,7 +146,7 @@ async function fetchWebsiteDirect(
     const h1Matches = [...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)];
     const h1 = h1Matches
       .map((m) =>
-        m[1]
+        (m[1] ?? "")
           .replace(/<[^>]*>/g, "")
           .replace(/\s+/g, " ")
           .trim(),
@@ -132,7 +158,7 @@ async function fetchWebsiteDirect(
     const h2Matches = [...html.matchAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi)];
     const h2 = h2Matches
       .map((m) =>
-        m[1]
+        (m[1] ?? "")
           .replace(/<[^>]*>/g, "")
           .replace(/\s+/g, " ")
           .trim(),
@@ -161,7 +187,7 @@ async function fetchWebsiteDirect(
       meta_description: metaDesc,
       content: textContent,
       headings: { h1, h2 },
-      status_code: response.status,
+      status_code: res.status,
     };
   } catch (err) {
     console.error(

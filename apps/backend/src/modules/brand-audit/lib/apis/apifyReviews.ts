@@ -11,7 +11,7 @@
  *   7. Return compact ReviewSummary — D7 only ever sees stats + 6 samples
  */
 
-import { analyzeWithGroq } from "@/lib/groq";
+import { analyzeWithGroq } from "../groq";
 
 const APIFY_BASE = "https://api.apify.com/v2";
 const ACTOR_ID = "YVrEOM9F4GoyYkkUU";
@@ -151,7 +151,7 @@ function aggregateStats(
 
   for (const r of rows) {
     const key = String(Math.round(r.reviewRating));
-    if (key in dist) dist[key]++;
+    if (key in dist) dist[key] = (dist[key] ?? 0) + 1;
     ratingSum += r.reviewRating;
     if (r.ownerResponse) responseCount++;
     if (r.reviewerIsLocalGuide) localGuideCount++;
@@ -199,7 +199,7 @@ async function extractThemes(
   rows: ApifyReviewRow[],
 ): Promise<{ positiveThemes: string[]; negativeThemes: string[] }> {
   const fallback = { positiveThemes: [], negativeThemes: [] };
-  if (!process.env.GROQ_API_KEY) return fallback;
+  if (!process.env.ANTHROPIC_API_KEY) return fallback;
 
   const textRows = rows.filter((r) => r.reviewText);
   if (!textRows.length) return fallback;

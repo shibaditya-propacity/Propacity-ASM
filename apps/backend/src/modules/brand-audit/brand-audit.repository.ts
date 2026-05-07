@@ -374,6 +374,29 @@ export class BrandAuditRepository {
   }
 
   /**
+   * Append an asset object to the Audit.assets JSON array.
+   */
+  async addAsset(
+    tenantId: string,
+    auditId: string,
+    asset: Record<string, unknown>,
+  ): Promise<void> {
+    const row = await prisma.audit.findFirst({
+      where: { tenantId, id: auditId, deletedAt: null },
+      select: { assets: true },
+    });
+    if (!row) throw new Error(`Audit ${auditId} not found`);
+    const existing = Array.isArray(row.assets) ? (row.assets as unknown[]) : [];
+    await prisma.audit.update({
+      where: { id: auditId },
+      data: {
+        assets: [...existing, asset] as Prisma.InputJsonValue,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  /**
    * Set or replace the prospect link on an existing audit.
    */
   async linkToProspect(

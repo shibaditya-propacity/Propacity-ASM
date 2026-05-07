@@ -1,4 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
 import { ok, created } from "@/core/http/response";
 import { BrandAuditService } from "./brand-audit.service";
 import { BrandAuditRepository } from "./brand-audit.repository";
@@ -11,6 +14,8 @@ import type {
   LinkProspectInput,
 } from "./brand-audit.dto";
 import { prisma } from "@/core/prisma/client";
+
+const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
 
 // ── Shared helpers (ported from Next.js _shared.ts) ───────────────────────────
 
@@ -296,6 +301,73 @@ export class BrandAuditController {
     try {
       const result = await this.service.backfillProspectLinks(req.tenant.id);
       ok(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ── Upload collateral PDF ─────────────────────────────────────────────────
+
+  uploadCollateral = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { id } = req.params as { id: string };
+      const tenantId = req.tenant.id;
+
+      const body = req.body as {
+        fileData?: string;
+        fileName?: string;
+        size?: number;
+      };
+
+      if (!body.fileData || !body.fileName) {
+        res.status(400).json({ error: "fileData and fileName are required" });
+        return;
+      }
+
+      const MAX_BYTES = 5 * 1024 * 1024;
+      const rawSize = body.size ?? 0;
+      if (rawSize > MAX_BYTES) {
+        res.status(400).json({ error: "File must be 5 MB or smaller" });
+        return;
+      }
+
+      const ext = path.extname(body.fileName).toLowerCase();
+      if (ext !== ".pdf") {
+        res.status(400).json({ error: "Only PDF files are allowed" });
+        return;
+      }
+
+      await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+
+      const diskName = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}.pdf`;
+      const filePath = path.join(UPLOADS_DIR, diskName);
+
+      // Strip data-URL prefix if present (e.g. "data:application/pdf;base64,")
+      const base64 = body.fileData.includes(",")
+        ? body.fileData.split(",")[1]!
+        : body.fileData;
+
+      await fs.promises.writeFile(filePath, Buffer.from(base64, "base64"));
+
+      const host = `${req.protocol}://${req.get("host")}`;
+      const url = `${host}/uploads/${diskName}`;
+
+      const asset = {
+        type: "collateral_pdf",
+        fileName: diskName,
+        originalName: body.fileName,
+        size: rawSize,
+        uploadedAt: new Date().toISOString(),
+        url,
+      };
+
+      await this.repo.addAsset(tenantId, id, asset);
+
+      ok(res, asset);
     } catch (err) {
       next(err);
     }
@@ -2570,6 +2642,283 @@ Rules:
         success: false,
         analysis: null,
         error: "Analysis failed. Please try again.",
+      });
+    }
+  };
+
+  // ── Brand lookup (pre-fill form) ───────────────────────────────────────────
+  // GET /brand-audit/lookup?brandName=X&city=Y
+  // All data sources run in parallel: Serper → PDL → social scraper →
+  // tech detector → social metrics → YouTube channel.
+
+  lookupBrand = async (req: Request, res: Response): Promise<void> => {
+    const { brandName, city } = req.query as {
+      brandName?: string;
+      city?: string;
+    };
+
+    if (!brandName?.trim()) {
+      res.status(400).json({
+        ok: false,
+        error: { code: "VALIDATION_ERROR", message: "brandName required" },
+      });
+      return;
+    }
+
+    try {
+      const { getSerpResults, getSocialProfileUrl } =
+        await import("./lib/apis/dataForSeo");
+      const { enrichCompany, extractCompanyData } =
+        await import("./lib/apis/pdl");
+      const { scrapeSocialLinks } = await import("./lib/apis/socialScraper");
+      const { detectTechAndAssets } = await import("./lib/apis/techDetector");
+      const {
+        getInstagramInsights,
+        getLinkedInInsights,
+        getFacebookInsights,
+        getYouTubeInsights,
+      } = await import("./lib/apis/socialInsights");
+
+      // ── Phase 1: Find domain via Serper ────────────────────────────────
+      const query = city
+        ? `${brandName} ${city} real estate developer`
+        : `${brandName} real estate developer India`;
+      const serpData = await getSerpResults(query);
+
+      let domain: string | null = null;
+      let websiteUrl: string | null = null;
+
+      if (serpData?.organic && Array.isArray(serpData.organic)) {
+        const results = serpData.organic as Array<{
+          link: string;
+          title: string;
+        }>;
+        const skipPatterns =
+          /99acres|housing\.com|magicbricks|justdial|sulekha|indiamart|wikipedia|linkedin\.com\/(jobs|company\/search)/i;
+        const nameParts = brandName
+          .toLowerCase()
+          .split(/\s+/)
+          .filter((s) => s.length > 2);
+
+        for (const r of results) {
+          if (!r.link) continue;
+          try {
+            const urlObj = new URL(r.link);
+            const host = urlObj.hostname.replace("www.", "");
+            if (skipPatterns.test(host)) continue;
+            const isMatch = nameParts.some(
+              (part) =>
+                host.toLowerCase().includes(part) ||
+                r.title.toLowerCase().includes(part),
+            );
+            if (isMatch) {
+              websiteUrl = `https://${host}`;
+              domain = host;
+              break;
+            }
+          } catch {
+            continue;
+          }
+        }
+        if (!domain) {
+          for (const r of results.slice(0, 5)) {
+            if (!r.link) continue;
+            try {
+              const urlObj = new URL(r.link);
+              const host = urlObj.hostname.replace("www.", "");
+              if (!skipPatterns.test(host)) {
+                websiteUrl = `https://${host}`;
+                domain = host;
+                break;
+              }
+            } catch {
+              continue;
+            }
+          }
+        }
+      }
+
+      // ── Phase 2: All enrichment sources in parallel ─────────────────────
+      const [pdlResult, scrapedLinksResult, techResult, socialProfilesResult] =
+        await Promise.allSettled([
+          domain ? enrichCompany(domain) : Promise.resolve(null),
+          websiteUrl ? scrapeSocialLinks(websiteUrl) : Promise.resolve(null),
+          websiteUrl ? detectTechAndAssets(websiteUrl) : Promise.resolve(null),
+          // Find social profile URLs via Serper in parallel
+          Promise.allSettled([
+            getSocialProfileUrl(brandName, "instagram.com"),
+            getSocialProfileUrl(brandName, "linkedin.com/company"),
+            getSocialProfileUrl(brandName, "facebook.com"),
+            getSocialProfileUrl(brandName, "youtube.com"),
+            getSocialProfileUrl(brandName, "twitter.com"),
+          ]),
+        ]);
+
+      // ── Merge identity data ────────────────────────────────────────────
+      let industry: string | null = null;
+      let description: string | null = null;
+      let founded: number | null = null;
+
+      const socialUrls: Record<string, string | null> = {
+        instagram: null,
+        linkedin: null,
+        facebook: null,
+        youtube: null,
+        twitter: null,
+      };
+
+      if (pdlResult.status === "fulfilled" && pdlResult.value) {
+        const extracted = extractCompanyData(pdlResult.value);
+        industry = extracted.industry ?? null;
+        description = extracted.summary ?? null;
+        founded = extracted.founded ?? null;
+        socialUrls.linkedin = extracted.socialLinks.linkedin ?? null;
+        socialUrls.instagram = extracted.socialLinks.instagram ?? null;
+        socialUrls.facebook = extracted.socialLinks.facebook ?? null;
+        socialUrls.youtube = extracted.socialLinks.youtube ?? null;
+        socialUrls.twitter = extracted.socialLinks.twitter ?? null;
+      }
+
+      if (
+        scrapedLinksResult.status === "fulfilled" &&
+        scrapedLinksResult.value
+      ) {
+        const s = scrapedLinksResult.value;
+        socialUrls.linkedin ??= s.linkedin;
+        socialUrls.instagram ??= s.instagram;
+        socialUrls.facebook ??= s.facebook;
+        socialUrls.youtube ??= s.youtube;
+        socialUrls.twitter ??= s.twitter;
+      }
+
+      if (socialProfilesResult.status === "fulfilled") {
+        const [ig, li, fb, yt, tw] = socialProfilesResult.value;
+        if (ig.status === "fulfilled" && ig.value)
+          socialUrls.instagram ??= ig.value;
+        if (li.status === "fulfilled" && li.value)
+          socialUrls.linkedin ??= li.value;
+        if (fb.status === "fulfilled" && fb.value)
+          socialUrls.facebook ??= fb.value;
+        if (yt.status === "fulfilled" && yt.value)
+          socialUrls.youtube ??= yt.value;
+        if (tw.status === "fulfilled" && tw.value)
+          socialUrls.twitter ??= tw.value;
+      }
+
+      // ── Phase 3: Social metrics + YouTube (need URLs from phase 2) ──────
+      const [igMetrics, liMetrics, fbMetrics, ytMetrics] =
+        await Promise.allSettled([
+          socialUrls.instagram
+            ? getInstagramInsights(
+                socialUrls.instagram
+                  .replace(/.*instagram\.com\//, "")
+                  .replace(/\/$/, ""),
+                brandName,
+              )
+            : Promise.resolve(null),
+          socialUrls.linkedin
+            ? getLinkedInInsights(socialUrls.linkedin, brandName)
+            : Promise.resolve(null),
+          socialUrls.facebook
+            ? getFacebookInsights(socialUrls.facebook, brandName)
+            : Promise.resolve(null),
+          socialUrls.youtube
+            ? getYouTubeInsights(socialUrls.youtube, brandName)
+            : Promise.resolve(null),
+        ]);
+
+      // ── Assemble response ──────────────────────────────────────────────
+      const tech = techResult.status === "fulfilled" ? techResult.value : null;
+      const logo = domain ? `https://logo.clearbit.com/${domain}` : null;
+
+      ok(res, {
+        brandName,
+        domain,
+        websiteUrl,
+        logo,
+        industry,
+        description,
+        founded,
+
+        social: {
+          instagram: {
+            url: socialUrls.instagram,
+            handle:
+              igMetrics.status === "fulfilled"
+                ? (igMetrics.value?.handle ?? null)
+                : null,
+            followers:
+              igMetrics.status === "fulfilled"
+                ? (igMetrics.value?.followers ?? null)
+                : null,
+            totalPosts:
+              igMetrics.status === "fulfilled"
+                ? (igMetrics.value?.totalPosts ?? null)
+                : null,
+          },
+          linkedin: {
+            url: socialUrls.linkedin,
+            followers:
+              liMetrics.status === "fulfilled"
+                ? (liMetrics.value?.followers ?? null)
+                : null,
+            employees:
+              liMetrics.status === "fulfilled"
+                ? (liMetrics.value?.employees ?? null)
+                : null,
+          },
+          facebook: {
+            url: socialUrls.facebook,
+            likes:
+              fbMetrics.status === "fulfilled"
+                ? (fbMetrics.value?.likes ?? null)
+                : null,
+            followers:
+              fbMetrics.status === "fulfilled"
+                ? (fbMetrics.value?.followers ?? null)
+                : null,
+          },
+          youtube: {
+            url: socialUrls.youtube,
+            subscribers:
+              ytMetrics.status === "fulfilled"
+                ? (ytMetrics.value?.subscribers ?? null)
+                : null,
+            totalVideos:
+              ytMetrics.status === "fulfilled"
+                ? (ytMetrics.value?.totalVideos ?? null)
+                : null,
+            videos:
+              ytMetrics.status === "fulfilled"
+                ? (ytMetrics.value?.recentVideos ?? []).slice(0, 3)
+                : [],
+          },
+          twitter: { url: socialUrls.twitter },
+        },
+
+        techStack: tech?.techStack ?? null,
+        fonts: tech ? tech.fonts.families : [],
+        colors: tech ? tech.colors.palette : [],
+        developerCredit: tech?.developerCredit ?? null,
+
+        seo: {
+          metaTitle: tech?.seo.metaTitle ?? null,
+          metaDescription: tech?.seo.metaDescription ?? null,
+          ogImage: tech?.seo.ogImage ?? null,
+          hasSSL: websiteUrl?.startsWith("https://") ?? false,
+          hasRobotsTxt: tech?.seo.hasRobotsTxt ?? null,
+          hasSitemap: tech?.seo.hasSitemap ?? null,
+          canonical: tech?.seo.canonical ?? null,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Brand lookup error:",
+        error instanceof Error ? error.message : error,
+      );
+      res.status(500).json({
+        ok: false,
+        error: { code: "LOOKUP_FAILED", message: "Brand lookup failed" },
       });
     }
   };
