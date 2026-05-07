@@ -306,6 +306,39 @@ export class BrandAuditController {
     }
   };
 
+  // ── Cancel a running audit ────────────────────────────────────────────────
+
+  cancelAudit = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { id } = req.params as { id: string };
+      const tenantId = req.tenant.id;
+
+      const audit = await this.repo.findById(tenantId, id);
+      if (!audit) {
+        res.status(404).json({ error: "Audit not found" });
+        return;
+      }
+
+      if (
+        audit.status !== "COLLECTING" &&
+        audit.status !== "ANALYZING" &&
+        audit.status !== "DRAFT"
+      ) {
+        res.status(400).json({ error: "Audit is not in a cancellable state" });
+        return;
+      }
+
+      await this.repo.updateStatus(tenantId, id, "DRAFT");
+      ok(res, { success: true });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   // ── Upload collateral PDF ─────────────────────────────────────────────────
 
   uploadCollateral = async (
