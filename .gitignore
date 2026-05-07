@@ -1,6 +1,10 @@
 .env
 *env
+*.env.local
 node_modules
+.pnpm-store/
+.vscode/
+coverage/
 
 # Turbo cache
 .turbo/
