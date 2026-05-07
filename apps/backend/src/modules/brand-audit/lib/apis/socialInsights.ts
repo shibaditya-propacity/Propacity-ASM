@@ -616,9 +616,12 @@ export interface YouTubeInsights {
   avgViewsPerVideo: number | null;
   uploadFrequencyPerMonth: number | null;
   recentVideos: Array<{
+    videoId: string;
     title: string;
     publishedAt: string;
     viewCount: number | null;
+    thumbnailUrl: string;
+    videoUrl: string;
   }>;
   source: "YouTubeDataAPI";
 }
@@ -740,9 +743,12 @@ export async function getYouTubeInsights(
     }
 
     result.recentVideos = videos.slice(0, 6).map((v) => ({
+      videoId: v.id.videoId,
       title: v.snippet?.title ?? "",
       publishedAt: v.snippet?.publishedAt ?? "",
       viewCount: videoStats[v.id.videoId] ?? null,
+      thumbnailUrl: `https://i.ytimg.com/vi/${v.id.videoId}/mqdefault.jpg`,
+      videoUrl: `https://www.youtube.com/watch?v=${v.id.videoId}`,
     }));
 
     // Calculate upload frequency: videos per month based on last 10 videos

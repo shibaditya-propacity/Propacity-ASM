@@ -2,6 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/core/api/client";
 import { growthKeys } from "./keys";
 
+export interface YouTubeVideo {
+  videoId: string;
+  title: string;
+  publishedAt: string;
+  viewCount: number | null;
+  thumbnailUrl: string;
+  videoUrl: string;
+}
+
 export interface BrandLookupResult {
   brandName: string;
   domain: string | null;
@@ -10,12 +19,58 @@ export interface BrandLookupResult {
   industry: string | null;
   description: string | null;
   founded: number | null;
+
   social: {
-    instagram: string | null;
-    linkedin: string | null;
-    facebook: string | null;
-    youtube: string | null;
-    twitter: string | null;
+    instagram: {
+      url: string | null;
+      handle: string | null;
+      followers: number | null;
+      totalPosts: number | null;
+    };
+    linkedin: {
+      url: string | null;
+      followers: number | null;
+      employees: number | null;
+    };
+    facebook: {
+      url: string | null;
+      likes: number | null;
+      followers: number | null;
+    };
+    youtube: {
+      url: string | null;
+      subscribers: number | null;
+      totalVideos: number | null;
+      videos: YouTubeVideo[];
+    };
+    twitter: { url: string | null };
+  };
+
+  techStack: {
+    cms: string | null;
+    framework: string | null;
+    analytics: string[];
+    adPixels: string[];
+    otherTech: string[];
+  } | null;
+
+  fonts: string[];
+  colors: string[];
+
+  developerCredit: {
+    name: string | null;
+    url: string | null;
+    confidence: "Confirmed" | "Likely" | "Unknown";
+  } | null;
+
+  seo: {
+    metaTitle: string | null;
+    metaDescription: string | null;
+    ogImage: string | null;
+    hasSSL: boolean;
+    hasRobotsTxt: boolean | null;
+    hasSitemap: boolean | null;
+    canonical: string | null;
   };
 }
 
