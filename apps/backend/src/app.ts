@@ -1,4 +1,9 @@
-import express, { Router } from "express";
+import express, {
+  Router,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import cors from "cors";
 import { errorHandler } from "@/core/errors/error-handler";
 import { registerAuthRoutes } from "@/modules/auth/auth.routes";
@@ -24,6 +29,19 @@ export function createApp(): express.Application {
     }),
   );
   app.use(express.json({ limit: "1mb" }));
+  // AWS proxies/ALBs sometimes strip Content-Type or forward it as text/plain.
+  // This re-parses those bodies as JSON so validation middleware always sees req.body.
+  app.use(express.text({ type: "text/plain", limit: "1mb" }));
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    if (typeof req.body === "string") {
+      try {
+        req.body = JSON.parse(req.body) as unknown;
+      } catch {
+        /* leave as-is */
+      }
+    }
+    next();
+  });
 
   const apiRouter = Router();
 
