@@ -83,9 +83,11 @@ function SidebarContent({
       {/* Logo */}
       <div className="h-16 flex items-center border-b border-white/10 shrink-0 overflow-hidden px-4">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="w-7 h-7 rounded-lg bg-brand-500 flex items-center justify-center shrink-0 text-white font-bold text-xs shadow-[0_0_12px_rgba(45,63,231,0.5)]">
-            P
-          </div>
+          <img
+            src="/propacity-logo.png"
+            alt="Propacity"
+            className="w-7 h-7 rounded-lg object-contain shrink-0"
+          />
           <AnimatePresence initial={false}>
             {!collapsed && (
               <motion.span
