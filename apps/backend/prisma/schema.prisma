@@ -26,6 +26,8 @@ model Tenant {
   prospectActivities GrowthProspectActivity[]
   auditDevelopers    AuditDeveloper[]
   audits             Audit[]
+  clients            Client[]
+  integrations       Integration[]
 }
 
 model User {
@@ -262,4 +264,99 @@ model Audit {
   @@index([tenantId, developerId])
   @@index([tenantId, prospectId])
   @@map("audits")
+}
+
+// =============================================================
+// MODULE: INTEGRATIONS
+// =============================================================
+
+// Client = the developer brand managed by the agency.
+// One tenant (agency) has many clients.
+model Client {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name      String
+  industry  String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  integrations Integration[]
+
+  @@index([tenantId, createdAt])
+  @@map("int_clients")
+}
+
+// Global lookup table — no tenantId (acceptable for seed data).
+model Provider {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  category        String   // 'AdPlatforms'|'Analytics'|'SeoTools'|'ReviewsListings'|'SocialMedia'|'Communication'|'FinanceBilling'|'CrmLeadRouting'|'DomainsHosting'|'AiContent'
+  description     String
+  authType        String   // 'OAUTH2' | 'API_KEY'
+  logoUrl         String
+  moduleRelevance String[] // 'Ads'|'Social'|'SEO'|'Website'|'Reputation'|'Promoter'|'Launch'
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  integrations        Integration[]
+  platformIntegration PlatformIntegration?
+
+  @@index([category])
+  @@map("int_providers")
+}
+
+// Per-client integration. One client can have at most one integration per provider.
+model Integration {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  providerId   String
+  provider     Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  status       String   @default("NOT_CONNECTED") // 'CONNECTED'|'NOT_CONNECTED'|'EXPIRED'|'ERROR'
+  accountLabel String?
+  credentials  Json     @default("{}")
+  lastSyncAt   DateTime?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  syncLogs SyncLog[]
+
+  @@unique([clientId, providerId])
+  @@index([tenantId, createdAt])
+  @@index([clientId, createdAt])
+  @@index([clientId, status])
+  @@index([providerId])
+  @@map("int_integrations")
+}
+
+model SyncLog {
+  id            String      @id @default(cuid())
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  triggeredAt   DateTime    @default(now())
+  status        String      // 'SUCCESS' | 'FAILED' | 'IN_PROGRESS'
+  recordsSynced Int?
+  errorMessage  String?
+
+  @@index([integrationId, triggeredAt])
+  @@map("int_sync_logs")
+}
+
+model PlatformIntegration {
+  id           String   @id @default(cuid())
+  providerId   String   @unique
+  provider     Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  status       String   @default("NOT_CONNECTED") // 'CONNECTED'|'NOT_CONNECTED'|'EXPIRED'|'ERROR'
+  accountLabel String?
+  credentials  Json     @default("{}")
+  lastSyncAt   DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("int_platform_integrations")
 }

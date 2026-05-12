@@ -7,6 +7,7 @@ import {
   Users,
   BarChart3,
   CalendarPlus,
+  Plug,
   X,
   LogOut,
   ChevronLeft,
@@ -31,6 +32,12 @@ const NAV_LINKS = [
     label: "Brand Audits",
     end: false,
     Icon: BarChart3,
+  },
+  {
+    to: "/integrations",
+    label: "Integrations",
+    end: false,
+    Icon: Plug,
   },
 ] as const;
 
