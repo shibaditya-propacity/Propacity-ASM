@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { getToken } from "@/core/auth/token";
+import { useAuditStatusStore } from "@/core/store/audit-status.store";
 import type { ProgressEvent } from "../brand-audit.types";
 
 const BASE_URL =
@@ -11,10 +12,12 @@ export function useRunAudit(auditId: string, onComplete?: () => void) {
   const [events, setEvents] = useState<ProgressEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const setGlobalRunning = useAuditStatusStore((s) => s.setRunning);
 
   const run = useCallback(async () => {
     if (running) return;
     setRunning(true);
+    setGlobalRunning(auditId);
     setEvents([]);
     setError(null);
 
@@ -57,8 +60,9 @@ export function useRunAudit(auditId: string, onComplete?: () => void) {
       }
     } finally {
       setRunning(false);
+      setGlobalRunning(null);
     }
-  }, [auditId, running, onComplete]);
+  }, [auditId, running, onComplete, setGlobalRunning]);
 
   const stop = useCallback(() => {
     abortRef.current?.abort();

@@ -5,6 +5,8 @@ import express, {
   type NextFunction,
 } from "express";
 import cors from "cors";
+import path from "path";
+import fs from "fs";
 import { errorHandler } from "@/core/errors/error-handler";
 import { registerAuthRoutes } from "@/modules/auth/auth.routes";
 import { AuthController } from "@/modules/auth/auth.controller";
@@ -28,20 +30,13 @@ export function createApp(): express.Application {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "1mb" }));
-  // AWS proxies/ALBs sometimes strip Content-Type or forward it as text/plain.
-  // This re-parses those bodies as JSON so validation middleware always sees req.body.
-  app.use(express.text({ type: "text/plain", limit: "1mb" }));
-  app.use((req: Request, _res: Response, next: NextFunction) => {
-    if (typeof req.body === "string") {
-      try {
-        req.body = JSON.parse(req.body) as unknown;
-      } catch {
-        /* leave as-is */
-      }
-    }
-    next();
-  });
+  // 8 MB — allows base64-encoded PDFs up to 5 MB in size
+  app.use(express.json({ limit: "8mb" }));
+
+  // Serve uploaded collateral files
+  const uploadsDir = path.resolve(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+  app.use("/uploads", express.static(uploadsDir));
 
   const apiRouter = Router();
 

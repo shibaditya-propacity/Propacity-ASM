@@ -1,30 +1,45 @@
-import axios from "axios";
-import { withRetry } from "@/lib/fetchWithRetry";
+import { fetchWithRetry, withRetry } from "../fetchWithRetry";
 
 const SERPER_BASE = "https://google.serper.dev";
 
-const serperClient = axios.create({
-  baseURL: SERPER_BASE,
-  timeout: 15000,
-  headers: {
-    "X-API-KEY": process.env.SERPER_API_KEY,
-    "Content-Type": "application/json",
-  },
-});
+async function serperPost<T>(
+  path: string,
+  body: Record<string, unknown>,
+): Promise<T> {
+  const res = await fetchWithRetry(`${SERPER_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "X-API-KEY": process.env.SERPER_API_KEY ?? "",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Serper ${path} error: ${res.status}`);
+  return res.json() as Promise<T>;
+}
 
 export async function getSerpResults(keyword: string) {
-  const response = await withRetry(() =>
-    serperClient.post("/search", { q: keyword, gl: "in", hl: "en", num: 10 }),
+  const data = await withRetry(() =>
+    serperPost<Record<string, unknown>>("/search", {
+      q: keyword,
+      gl: "in",
+      hl: "en",
+      num: 10,
+    }),
   );
-  return response.data || null;
+  return data ?? null;
 }
 
 export async function getPlacesResults(query: string) {
   try {
-    const response = await withRetry(() =>
-      serperClient.post("/places", { q: query, gl: "in", hl: "en" }),
+    const data = await withRetry(() =>
+      serperPost<Record<string, unknown>>("/places", {
+        q: query,
+        gl: "in",
+        hl: "en",
+      }),
     );
-    return response.data || null;
+    return data ?? null;
   } catch {
     return null;
   }
@@ -41,16 +56,18 @@ export async function getSocialProfileUrl(
     | "twitter.com",
 ): Promise<string | null> {
   try {
-    const response = await withRetry(() =>
-      serperClient.post("/search", {
+    const data = await withRetry(() =>
+      serperPost<{ organic?: Array<{ link: string }> }>("/search", {
         q: `${brandName} site:${platform}`,
         gl: "in",
         hl: "en",
         num: 3,
       }),
     );
-    const organic: Array<{ link: string }> = response.data?.organic ?? [];
-    const hit = organic.find((r) => r.link?.includes(platform.split("/")[0]));
+    const organic = data?.organic ?? [];
+    const hit = organic.find((r) =>
+      r.link?.includes(platform.split("/")[0] ?? ""),
+    );
     return hit?.link ?? null;
   } catch {
     return null;
@@ -119,8 +136,8 @@ export async function searchCompetitors(
   }
 
   if (serpKeywords.length > 0) {
-    const kw = serpKeywords[0];
-    queries.push(`${kw} companies ${location}`);
+    const kw = serpKeywords[0] ?? "";
+    if (kw) queries.push(`${kw} companies ${location}`);
   }
 
   // Always ensure at least one query using the brand name as context
@@ -137,19 +154,24 @@ export async function searchCompetitors(
       // Run organic + places in parallel per query
       const [organicRes, placesRes] = await Promise.allSettled([
         withRetry(() =>
-          serperClient.post("/search", { q: q, gl: "in", hl: "en", num: 10 }),
+          serperPost<{
+            organic?: Array<{ title: string; link: string; snippet?: string }>;
+          }>("/search", { q, gl: "in", hl: "en", num: 10 }),
         ),
         withRetry(() =>
-          serperClient.post("/places", { q: q, gl: "in", hl: "en" }),
+          serperPost<{
+            places?: Array<{
+              title: string;
+              address?: string;
+              rating?: number;
+              website?: string;
+            }>;
+          }>("/places", { q, gl: "in", hl: "en" }),
         ),
       ]);
 
       if (organicRes.status === "fulfilled") {
-        const organic: Array<{
-          title: string;
-          link: string;
-          snippet?: string;
-        }> = organicRes.value.data?.organic ?? [];
+        const organic = organicRes.value.organic ?? [];
         for (const item of organic) {
           if (!item.title || !item.link) continue;
           let domain = "";
@@ -179,12 +201,7 @@ export async function searchCompetitors(
       }
 
       if (placesRes.status === "fulfilled") {
-        const places: Array<{
-          title: string;
-          address?: string;
-          rating?: number;
-          website?: string;
-        }> = placesRes.value.data?.places ?? [];
+        const places = placesRes.value.places ?? [];
         for (const place of places) {
           if (!place.title) continue;
           const key = place.title.toLowerCase();

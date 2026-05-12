@@ -40,9 +40,12 @@ Return this exact JSON:
 {
   "score": <number 0-100>,
   "summary": "<2-3 sentences about competitive position>",
+  "competitors": ["<name of competitor 1>", "<name of competitor 2>"],
   "items": [{ "code": "D9-1", "status": "pass"|"fail"|"partial", "finding": "<evidence-based finding>", "recommendation": "<action>", "priority": "critical"|"high"|"medium"|"low", "dataSource": "GooglePlaces"|"HikerAPI"|"DataForSEO"|"Manual", "sourceUrl": "<direct URL proving this finding, or null>" }],
   "criticalFlags": [],
   "strengths": [],
   "quickWins": []
-}`;
+}
+
+The "competitors" field must list every competitor name you actually discuss in this analysis — drawn from the STATED COMPETITORS list and any additional names surfaced by the SERP/GMB data. Plain brand names only, no URLs.`;
 }

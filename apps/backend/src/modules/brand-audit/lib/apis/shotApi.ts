@@ -1,18 +1,27 @@
-import axios from "axios";
-import { withRetry } from "@/lib/fetchWithRetry";
+import { fetchWithRetry, withRetry } from "../fetchWithRetry";
 
 export async function captureScreenshot(
   websiteUrl: string,
 ): Promise<string | null> {
   try {
-    const response = await withRetry(() =>
-      axios.get("https://api.microlink.io/", {
-        timeout: 30000,
-        params: { url: websiteUrl, screenshot: true, meta: false },
-      }),
+    const params = new URLSearchParams({
+      url: websiteUrl,
+      screenshot: "true",
+      meta: "false",
+    });
+    const res = await withRetry(() =>
+      fetchWithRetry(
+        `https://api.microlink.io/?${params.toString()}`,
+        {},
+        2,
+        30000,
+      ),
     );
-    const url: string | undefined = response.data?.data?.screenshot?.url;
-    return url || null;
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      data?: { screenshot?: { url?: string } };
+    };
+    return data?.data?.screenshot?.url ?? null;
   } catch {
     return null;
   }
@@ -36,15 +45,9 @@ export async function checkClearbitLogo(
   // Try Clearbit first, fall back to Google favicon
   try {
     const logoUrl = `https://logo.clearbit.com/${clean}`;
-    const res = await axios.get(logoUrl, {
-      responseType: "arraybuffer",
-      timeout: 8000,
-    });
-    if (
-      res.status === 200 &&
-      (res.headers["content-type"] || "").startsWith("image/")
-    )
-      return logoUrl;
+    const res = await fetchWithRetry(logoUrl, {}, 1, 8000);
+    const contentType = res.headers.get("content-type") ?? "";
+    if (res.ok && contentType.startsWith("image/")) return logoUrl;
   } catch {
     /* fall through */
   }

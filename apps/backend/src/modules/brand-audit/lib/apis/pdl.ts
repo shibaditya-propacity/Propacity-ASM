@@ -1,6 +1,5 @@
-import axios from "axios";
-import { withRetry } from "@/lib/fetchWithRetry";
-import type { PDLCompanyResponse } from "@/types/apiResponses";
+import { fetchWithRetry, withRetry } from "../fetchWithRetry";
+import type { PDLCompanyResponse } from "../api-types";
 
 const CE_BASE_URL = "https://api.companyenrich.com";
 
@@ -8,20 +7,24 @@ export async function enrichCompany(
   domain: string,
 ): Promise<PDLCompanyResponse | null> {
   try {
-    const response = await withRetry(() =>
-      axios.get(`${CE_BASE_URL}/companies/enrich`, {
-        timeout: 15000,
-        params: { domain },
-        headers: {
-          Authorization: `Bearer ${process.env.COMPANY_ENRICH_API_KEY}`,
-          accept: "application/json",
+    const url = `${CE_BASE_URL}/companies/enrich?domain=${encodeURIComponent(domain)}`;
+    const res = await withRetry(() =>
+      fetchWithRetry(
+        url,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.COMPANY_ENRICH_API_KEY ?? ""}`,
+            accept: "application/json",
+          },
         },
-      }),
+        2,
+        15000,
+      ),
     );
-    return response.data;
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`enrichCompany error: ${res.status}`);
+    return res.json() as Promise<PDLCompanyResponse>;
   } catch (error: unknown) {
-    if (axios.isAxiosError(error) && error.response?.status === 404)
-      return null;
     // On any other error (timeout, network, etc.) return null instead of throwing
     console.error(
       "enrichCompany error:",

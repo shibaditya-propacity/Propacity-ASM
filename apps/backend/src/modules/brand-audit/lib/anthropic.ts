@@ -38,7 +38,7 @@ export async function analyzeWithClaude(
       });
 
       const content = response.content[0];
-      if (content.type !== "text")
+      if (!content || content.type !== "text")
         throw new Error("Unexpected response type from AI service");
 
       return extractJson(content.text.trim());
@@ -137,7 +137,7 @@ export async function analyzeWithVision(
       });
 
       const content = response.content[0];
-      if (content.type !== "text")
+      if (!content || content.type !== "text")
         throw new Error("Unexpected response type from AI service");
 
       return extractJson(content.text.trim());
