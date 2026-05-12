@@ -5,7 +5,7 @@ import type { ProgressEvent } from "../brand-audit.types";
 
 const BASE_URL =
   (import.meta.env["VITE_API_BASE_URL"] as string | undefined) ??
-  "http://localhost:3000/api/v1";
+  "https://dev.api.propacity.in/brand-audit/api/v1";
 
 export function useRunAudit(auditId: string, onComplete?: () => void) {
   const [running, setRunning] = useState(false);
