@@ -5,10 +5,19 @@ interface ConnectionMatrixProps {
   matrix: ConnectionMatrixType;
 }
 
-const STATUS_DOT: Record<
-  string,
-  { color: string; icon: typeof CheckCircle2; label: string }
-> = {
+type StatusDotConfig = {
+  color: string;
+  icon: typeof CheckCircle2;
+  label: string;
+};
+
+const NOT_CONNECTED_CONFIG: StatusDotConfig = {
+  color: "bg-slate-200",
+  icon: XCircle,
+  label: "Not connected",
+};
+
+const STATUS_DOT: Record<string, StatusDotConfig> = {
   CONNECTED: {
     color: "bg-emerald-500",
     icon: CheckCircle2,
@@ -16,11 +25,7 @@ const STATUS_DOT: Record<
   },
   ERROR: { color: "bg-red-500", icon: AlertCircle, label: "Error" },
   EXPIRED: { color: "bg-amber-500", icon: AlertCircle, label: "Expired" },
-  NOT_CONNECTED: {
-    color: "bg-slate-200",
-    icon: XCircle,
-    label: "Not connected",
-  },
+  NOT_CONNECTED: NOT_CONNECTED_CONFIG,
 };
 
 export function ConnectionMatrix({ matrix }: ConnectionMatrixProps) {
@@ -86,7 +91,7 @@ export function ConnectionMatrix({ matrix }: ConnectionMatrixProps) {
               </td>
               {providers.map((p) => {
                 const status = data[client.id]?.[p.id] ?? "NOT_CONNECTED";
-                const cfg = STATUS_DOT[status] ?? STATUS_DOT.NOT_CONNECTED;
+                const cfg = STATUS_DOT[status] ?? NOT_CONNECTED_CONFIG;
                 return (
                   <td key={p.id} className="px-3 py-3 text-center">
                     <div className="group relative inline-flex items-center justify-center">
