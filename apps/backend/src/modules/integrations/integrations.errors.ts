@@ -100,3 +100,16 @@ export class OAuthCallbackError extends AppError {
     });
   }
 }
+
+export class SyncFailedError extends AppError {
+  constructor(detail: string) {
+    super({
+      code: "INTEGRATIONS_SYNC_FAILED",
+      message: `Sync failed: ${detail}`,
+      // Pass the detail through as the public message — sync errors are
+      // user-actionable (wrong site URL, insufficient permissions, etc.)
+      publicMessage: detail,
+      statusCode: 422,
+    });
+  }
+}

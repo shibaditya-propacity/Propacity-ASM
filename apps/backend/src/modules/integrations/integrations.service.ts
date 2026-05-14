@@ -19,6 +19,7 @@ import {
   ProviderNotFoundError,
   OAuthUnsupportedProviderError,
   OAuthTokenRefreshError,
+  SyncFailedError,
 } from "./integrations.errors";
 import type { StoredCredentials } from "./oauth/credentials";
 import { isExpired, loadTokens } from "./oauth/credentials";
@@ -466,7 +467,9 @@ export class IntegrationsService {
         providerId,
         "ERROR",
       );
-      throw err;
+      // Re-throw as a SyncFailedError so the error handler returns 422 with
+      // the real message instead of swallowing it as a generic 500.
+      throw new SyncFailedError(msg);
     }
   }
 
