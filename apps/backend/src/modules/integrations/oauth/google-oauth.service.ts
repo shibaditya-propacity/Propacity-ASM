@@ -155,9 +155,13 @@ export async function detectGoogleAccountLabel(
   }
 }
 
-// Permission levels that can query the searchAnalytics API.
-// siteRestrictedUser can list the site but cannot run analytics queries.
-const GSC_QUERYABLE_PERMISSIONS = new Set(["siteOwner", "siteFullUser"]);
+// All verified permission levels can query the searchAnalytics API.
+// siteRestrictedUser has full read access — only management actions are restricted.
+const GSC_QUERYABLE_PERMISSIONS = new Set([
+  "siteOwner",
+  "siteFullUser",
+  "siteRestrictedUser",
+]);
 
 async function detectSearchConsoleSite(
   accessToken: string,

@@ -57,8 +57,14 @@ export interface GscSyncResult {
   recordsSynced: number;
 }
 
-// Permission levels that allow querying the searchAnalytics API.
-const QUERYABLE_PERMISSIONS = new Set(["siteOwner", "siteFullUser"]);
+// All verified permission levels can query the searchAnalytics API via the
+// webmasters.readonly scope. siteRestrictedUser has full read access to
+// performance data — only management actions (adding users, etc.) are restricted.
+const QUERYABLE_PERMISSIONS = new Set([
+  "siteOwner",
+  "siteFullUser",
+  "siteRestrictedUser",
+]);
 
 // Strip trailing slash and lowercase for loose URL comparison.
 // Handles https://propacity.com/ vs https://propacity.com and
