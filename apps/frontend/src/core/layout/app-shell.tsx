@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/core/auth/use-auth";
 import { useAuditStatusStore } from "@/core/store/audit-status.store";
 import { WorkshopForm } from "@/modules/growth/components/workshop-form";
+import { ToastContainer } from "@/core/ui/toast-container";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
@@ -377,6 +378,7 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen bg-[#F4F6FB]">
+      <ToastContainer />
       {/* ── Desktop sidebar ── */}
       <motion.aside
         animate={{

@@ -1,41 +1,101 @@
-# Integrations Module
+# Module: Integrations
 
-Manages third-party provider connections for a tenant. Tracks connection status, syncs, and module readiness across Growth, Social, SEO, Website, Reputation, Promoter, and Launch modules.
+## Purpose
 
-## Database models
+Manages third-party platform connections for each client workspace. Supports OAuth 2.0 and API-key providers. Each integration is scoped to a tenant and a client; one client can have at most one integration per provider. Stores encrypted credentials, tracks sync history, and exposes module readiness percentages for SEO, Ads, Social, Website, Reputation, Promoter, and Launch modules.
 
-| Model                 | Table                       | Notes                                        |
-| --------------------- | --------------------------- | -------------------------------------------- |
-| `Provider`            | `int_providers`             | Global lookup — no tenantId                  |
-| `Integration`         | `int_integrations`          | Per-tenant provider connection               |
-| `SyncLog`             | `int_sync_logs`             | Sync history per integration                 |
-| `PlatformIntegration` | `int_platform_integrations` | Platform-level (Propacity-owned) connections |
+## Owns (data)
 
-## Routes
+- `Client` — the developer brand managed by the agency (one tenant has many clients)
+- `Provider` — global lookup of available integrations (no tenantId; seed data only)
+- `Integration` — per-client connection status + encrypted credentials (`@@unique([clientId, providerId])`)
+- `SyncLog` — append-only sync attempt log per integration
+- `PlatformIntegration` — agency-level (platform-scoped) integration for shared tools
 
-| Method | Path                                         | Description                                |
-| ------ | -------------------------------------------- | ------------------------------------------ |
-| GET    | `/integrations`                              | All providers + tenant's connection status |
-| POST   | `/integrations/:providerId/connect/api-key`  | Connect via API key                        |
-| POST   | `/integrations/:providerId/connect/oauth`    | Connect via OAuth                          |
-| POST   | `/integrations/:providerId/disconnect`       | Disconnect integration                     |
-| POST   | `/integrations/:providerId/sync`             | Trigger manual sync                        |
-| GET    | `/integrations/:providerId/sync-logs`        | Paginated sync history                     |
-| GET    | `/integrations/readiness`                    | Module readiness percentages               |
-| GET    | `/integrations/oauth/callback`               | OAuth redirect callback                    |
-| POST   | `/integrations/oauth/refresh/:integrationId` | Refresh OAuth tokens                       |
-| GET    | `/integrations/platform`                     | Platform-level integrations                |
-| POST   | `/integrations/platform/:providerId/connect` | Connect platform API key                   |
-| POST   | `/integrations/platform/:providerId/sync`    | Sync platform integration                  |
+## Exposes (API)
 
-## Auth guards
+All routes are mounted under `/api/v1/integrations`.
 
-All routes require `authGuard` + `tenantGuard`. Platform management routes should additionally check `canManagePlatform` (admin-only).
+### Public
 
-## Module readiness map
+- `GET  /integrations/oauth/callback` — OAuth redirect target; exchanges code, stores tokens, posts result to opener via `postMessage`
 
-Each Growth module tracks a list of relevant providers. The readiness percentage is `(connected / total_in_db) * 100` for providers that exist in the seeded database.
+### Protected (authGuard + tenantGuard)
 
-## Credentials security
+- `GET  /integrations/clients` — list all clients for the tenant
+- `POST /integrations/clients` — create a new client
+- `GET  /integrations/matrix` — all clients × providers connection matrix
+- `POST /integrations/oauth/refresh/:integrationId` — refresh an expired OAuth token
+- `GET  /integrations/platform` — list platform-level integrations
+- `POST /integrations/platform/:providerId/connect` — connect a platform integration via API key
+- `POST /integrations/platform/:providerId/sync` — trigger platform sync
+- `GET  /integrations/:clientId` — providers with connection status for a client
+- `GET  /integrations/:clientId/readiness` — module readiness percentages
+- `POST /integrations/:clientId/:providerId/connect` — initiate OAuth (returns `authUrl`) or connect via API key
+- `POST /integrations/:clientId/:providerId/connect/api-key` — connect via API key directly
+- `POST /integrations/:clientId/:providerId/disconnect` — revoke token + set NOT_CONNECTED
+- `POST /integrations/:clientId/:providerId/sync` — trigger manual data pull
+- `GET  /integrations/:clientId/:providerId/sync-logs` — paginated sync history
 
-Credentials (API keys, OAuth tokens) are stored as JSON blobs. In production these must be encrypted at rest using a KMS-backed encryption key before upsert and decrypted on read.
+## OAuth providers
+
+| Provider              | Service file                    | Scopes                                          |
+| --------------------- | ------------------------------- | ----------------------------------------------- |
+| Google Search Console | `oauth/google-oauth.service.ts` | `webmasters.readonly`                           |
+| Google Analytics 4    | `oauth/google-oauth.service.ts` | `analytics.readonly`                            |
+| Google Ads            | `oauth/google-oauth.service.ts` | `adwords`                                       |
+| Meta Ads              | `oauth/meta-oauth.service.ts`   | `ads_read, ads_management, business_management` |
+
+Credentials are encrypted at rest using AES-256-GCM (`oauth/credentials.ts`). The key is read from `CREDENTIALS_ENCRYPTION_KEY` (64-char hex).
+
+## Sync handlers
+
+| Provider              | File                                 | Data pulled                                              |
+| --------------------- | ------------------------------------ | -------------------------------------------------------- |
+| Google Search Console | `sync/google-search-console.sync.ts` | impressions, clicks, CTR, avg position, per-page data    |
+| Google Analytics 4    | `sync/google-analytics.sync.ts`      | sessions, users, bounce rate, conversions, channels      |
+| Google Ads            | `sync/google-ads.sync.ts`            | campaigns, keywords, spend, QS, Impression Share         |
+| Meta Ads              | `sync/meta-ads.sync.ts`              | campaigns, spend, impressions, clicks, conversions, ROAS |
+
+## Emits (events)
+
+- `integrations.connected` — when a new integration is successfully connected
+- `integrations.disconnected` — when an integration is disconnected
+- `integrations.synced` — when a sync completes (SUCCESS or FAILED)
+- `integrations.expired` — when a token refresh fails and status is set to EXPIRED
+
+## Listens to (events)
+
+None currently.
+
+## Depends on (Platform Core services)
+
+- `@/core/prisma/client` — database access
+- `@/core/auth/auth.guard` — authentication
+- `@/core/tenant/tenant.guard` — tenant scoping
+- `@/core/validation/validate` — Zod middleware
+- `@/core/errors/app-error` — error hierarchy
+- `@/core/http/response` — response helpers
+
+## Background jobs
+
+None currently. Sync is triggered synchronously on the HTTP request. Long-running syncs should be moved to a `integrations-sync` BullMQ queue in a future iteration.
+
+## Environment variables required
+
+```
+GOOGLE_CLIENT_ID          — Google OAuth app client ID
+GOOGLE_CLIENT_SECRET      — Google OAuth app client secret
+GOOGLE_REDIRECT_URI       — must match Google Cloud Console registered URI
+GOOGLE_ADS_DEVELOPER_TOKEN — required only for Google Ads sync
+META_APP_ID               — Meta app ID
+META_APP_SECRET           — Meta app secret
+META_REDIRECT_URI         — must match Meta App Dashboard registered URI
+CREDENTIALS_ENCRYPTION_KEY — 64-char hex AES-256 key for token encryption
+```
+
+## Open questions
+
+- Sync should be moved to a BullMQ worker for providers that may take >2 s to respond.
+- Google Ads sync requires the user to have a Manager Account (MCC) or direct customer access; errors are surfaced in SyncLog.
+- Meta long-lived tokens expire after 60 days; a background job should pre-emptively refresh them before expiry.
