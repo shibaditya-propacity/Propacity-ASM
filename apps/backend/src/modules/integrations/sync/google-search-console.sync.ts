@@ -60,30 +60,45 @@ export interface GscSyncResult {
 // Permission levels that allow querying the searchAnalytics API.
 const QUERYABLE_PERMISSIONS = new Set(["siteOwner", "siteFullUser"]);
 
+// Strip trailing slash and lowercase for loose URL comparison.
+// Handles https://propacity.com/ vs https://propacity.com and
+// sc-domain:propacity.com vs SC-DOMAIN:propacity.com.
+function normalizeUrl(url: string): string {
+  return url.replace(/\/+$/, "").toLowerCase();
+}
+
 async function checkSitePermission(
   accessToken: string,
   siteUrl: string,
 ): Promise<void> {
-  const res = await fetch(
-    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}`,
-    { headers: { Authorization: `Bearer ${accessToken}` } },
-  );
-  if (!res.ok) {
-    if (res.status === 403 || res.status === 404) {
-      throw new Error(
-        `Site "${siteUrl}" was not found in your Search Console account. ` +
-          `Open the integration settings and set the correct verified property URL.`,
-      );
-    }
-    return; // non-fatal — let the query attempt surface its own error
-  }
-  const site = (await res.json()) as {
-    siteUrl: string;
-    permissionLevel: string;
+  // Use sites.list (not sites.get) so we match regardless of URL format —
+  // sites.get is strict about the exact registered form (URL prefix vs domain
+  // property), whereas list returns every property the token can see.
+  const res = await fetch("https://www.googleapis.com/webmasters/v3/sites", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) return; // network/auth issue — let the analytics query fail with its own error
+
+  const data = (await res.json()) as {
+    siteEntry?: Array<{ siteUrl: string; permissionLevel: string }>;
   };
-  if (!QUERYABLE_PERMISSIONS.has(site.permissionLevel)) {
+  const sites = data.siteEntry ?? [];
+  const normalized = normalizeUrl(siteUrl);
+
+  const matched = sites.find((s) => normalizeUrl(s.siteUrl) === normalized);
+
+  if (!matched) {
+    const available = sites.map((s) => s.siteUrl).join(", ") || "none found";
     throw new Error(
-      `Your Google account has "${site.permissionLevel}" access to "${siteUrl}". ` +
+      `"${siteUrl}" is not in your Search Console account. ` +
+        `Available properties: ${available}. ` +
+        `Update the site URL in the integration settings to one of the listed properties.`,
+    );
+  }
+
+  if (!QUERYABLE_PERMISSIONS.has(matched.permissionLevel)) {
+    throw new Error(
+      `Your Google account has "${matched.permissionLevel}" access to "${matched.siteUrl}". ` +
         `Querying search analytics requires siteFullUser or siteOwner permission. ` +
         `Connect with the account that owns this property in Search Console.`,
     );
