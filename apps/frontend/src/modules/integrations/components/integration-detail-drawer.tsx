@@ -29,6 +29,15 @@ interface GscMeta {
     ctr: number;
     position: number;
   }>;
+  queries: Array<{
+    query: string;
+    impressions: number;
+    clicks: number;
+    ctr: number;
+    position: number;
+  }>;
+  indexCoverage: { indexed: number; notIndexed: number };
+  mobileUsabilityIssues: number;
   dateRange: { startDate: string; endDate: string };
   recordsSynced: number;
 }
@@ -114,11 +123,29 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 // ── Provider-specific data panels ─────────────────────────────────────────────
 
 function GscPanel({ meta }: { meta: GscMeta }) {
+  const analyticsTableCols = (
+    <tr className="bg-slate-50 border-b border-slate-100">
+      <th className="text-left px-3 py-2 text-slate-500 font-semibold" />
+      <th className="text-right px-3 py-2 text-slate-500 font-semibold">
+        Imp.
+      </th>
+      <th className="text-right px-3 py-2 text-slate-500 font-semibold">
+        Clicks
+      </th>
+      <th className="text-right px-3 py-2 text-slate-500 font-semibold">CTR</th>
+      <th className="text-right px-3 py-2 text-slate-500 font-semibold">
+        Pos.
+      </th>
+    </tr>
+  );
+
   return (
     <div className="space-y-4">
       <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
         Last 28 days · {meta.dateRange.startDate} → {meta.dateRange.endDate}
       </p>
+
+      {/* Summary KPIs */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Impressions" value={fmt(meta.impressions)} />
         <StatCard label="Clicks" value={fmt(meta.clicks)} />
@@ -126,30 +153,30 @@ function GscPanel({ meta }: { meta: GscMeta }) {
         <StatCard label="Avg. Position" value={meta.avgPosition.toFixed(1)} />
       </div>
 
+      {/* Index coverage */}
+      {(meta.indexCoverage?.indexed > 0 ||
+        meta.indexCoverage?.notIndexed > 0) && (
+        <>
+          <p className="text-xs font-semibold text-slate-600 mt-2">
+            Index Coverage
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Indexed" value={fmt(meta.indexCoverage.indexed)} />
+            <StatCard
+              label="Not Indexed"
+              value={fmt(meta.indexCoverage.notIndexed)}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Top pages */}
       {meta.pages.length > 0 && (
         <>
           <p className="text-xs font-semibold text-slate-600 mt-2">Top Pages</p>
           <div className="overflow-x-auto rounded-xl border border-slate-100">
             <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="text-left px-3 py-2 text-slate-500 font-semibold">
-                    Page
-                  </th>
-                  <th className="text-right px-3 py-2 text-slate-500 font-semibold">
-                    Imp.
-                  </th>
-                  <th className="text-right px-3 py-2 text-slate-500 font-semibold">
-                    Clicks
-                  </th>
-                  <th className="text-right px-3 py-2 text-slate-500 font-semibold">
-                    CTR
-                  </th>
-                  <th className="text-right px-3 py-2 text-slate-500 font-semibold">
-                    Pos.
-                  </th>
-                </tr>
-              </thead>
+              <thead>{analyticsTableCols}</thead>
               <tbody>
                 {meta.pages.slice(0, 10).map((p, i) => (
                   <tr
@@ -170,6 +197,44 @@ function GscPanel({ meta }: { meta: GscMeta }) {
                     </td>
                     <td className="text-right px-3 py-2 text-slate-600">
                       {p.position.toFixed(1)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Top queries */}
+      {meta.queries?.length > 0 && (
+        <>
+          <p className="text-xs font-semibold text-slate-600 mt-2">
+            Top Queries
+          </p>
+          <div className="overflow-x-auto rounded-xl border border-slate-100">
+            <table className="w-full text-xs">
+              <thead>{analyticsTableCols}</thead>
+              <tbody>
+                {meta.queries.slice(0, 10).map((q, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-slate-50 hover:bg-slate-50/50"
+                  >
+                    <td className="px-3 py-2 text-slate-700 max-w-[180px] truncate">
+                      {q.query}
+                    </td>
+                    <td className="text-right px-3 py-2 text-slate-600">
+                      {fmt(q.impressions)}
+                    </td>
+                    <td className="text-right px-3 py-2 text-slate-600">
+                      {fmt(q.clicks)}
+                    </td>
+                    <td className="text-right px-3 py-2 text-slate-600">
+                      {pct(q.ctr)}
+                    </td>
+                    <td className="text-right px-3 py-2 text-slate-600">
+                      {q.position.toFixed(1)}
                     </td>
                   </tr>
                 ))}

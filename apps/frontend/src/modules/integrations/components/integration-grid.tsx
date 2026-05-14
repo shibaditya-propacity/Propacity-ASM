@@ -5,6 +5,15 @@ import { ConnectModal } from "./connect-modal";
 import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 import { CategoryTabs } from "./category-tabs";
 
+// Providers shown in the "Priority Integrations" section at the top.
+// Order determines card order within the section.
+const PRIORITY_PROVIDER_NAMES = [
+  "Google Analytics 4",
+  "Google Search Console",
+  "Google Ads",
+  "Meta Ads",
+];
+
 interface IntegrationGridProps {
   clientId: string;
   providers: ProviderWithStatus[];
@@ -31,8 +40,31 @@ export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
       ? providers
       : providers.filter((p) => p.category === activeCategory);
 
+  // Priority providers, preserving the defined order
+  const prioritySet = new Set(PRIORITY_PROVIDER_NAMES);
+  const priorityProviders = PRIORITY_PROVIDER_NAMES.flatMap((name) =>
+    filtered.filter((p) => p.name === name),
+  );
+  const remainingProviders = filtered.filter((p) => !prioritySet.has(p.name));
+
+  function renderCards(list: ProviderWithStatus[]) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {list.map((provider) => (
+          <IntegrationCard
+            key={provider.id}
+            clientId={clientId}
+            provider={provider}
+            onConnect={(p) => setConnectingId(p.id)}
+            onView={(p) => setViewingId(p.id)}
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <CategoryTabs
         categories={categories}
         active={activeCategory}
@@ -46,16 +78,26 @@ export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map((provider) => (
-            <IntegrationCard
-              key={provider.id}
-              clientId={clientId}
-              provider={provider}
-              onConnect={(p) => setConnectingId(p.id)}
-              onView={(p) => setViewingId(p.id)}
-            />
-          ))}
+        <div className="space-y-6">
+          {priorityProviders.length > 0 && (
+            <section>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                Priority Integrations
+              </p>
+              {renderCards(priorityProviders)}
+            </section>
+          )}
+
+          {remainingProviders.length > 0 && (
+            <section>
+              {priorityProviders.length > 0 && (
+                <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+                  All Integrations
+                </p>
+              )}
+              {renderCards(remainingProviders)}
+            </section>
+          )}
         </div>
       )}
 

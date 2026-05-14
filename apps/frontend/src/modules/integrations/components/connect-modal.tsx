@@ -198,9 +198,10 @@ function OAuthForm({ clientId, provider, onClose }: ConnectModalProps) {
 function getGoogleScopeSummary(providerName: string): string[] {
   if (providerName === "Google Search Console") {
     return [
-      "Read your verified sites in Search Console",
+      "Read-only access to your Search Console properties",
       "Access impressions, clicks, CTR, and average position",
-      "View page-level search performance data",
+      "View top pages and top queries with individual stats",
+      "Read index coverage counts from your submitted sitemaps",
     ];
   }
   if (providerName === "Google Analytics 4") {

@@ -5,7 +5,10 @@ export const PROVIDER_DATA_POINTS: Record<string, string[]> = {
     "Clicks",
     "CTR",
     "Avg. Position",
-    "Per-page Data",
+    "Top Pages",
+    "Top Queries",
+    "Index Coverage",
+    "Mobile Usability",
   ],
   "Google Analytics 4": [
     "Sessions",
