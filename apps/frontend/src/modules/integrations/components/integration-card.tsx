@@ -8,11 +8,13 @@ import {
 import type { ProviderWithStatus } from "../types";
 import { useDisconnect } from "../api/use-disconnect";
 import { useSync } from "../api/use-sync";
+import { PROVIDER_DATA_POINTS } from "../provider-data-points";
 
 interface IntegrationCardProps {
   clientId: string;
   provider: ProviderWithStatus;
   onConnect: (provider: ProviderWithStatus) => void;
+  onView?: (provider: ProviderWithStatus) => void;
 }
 
 const STATUS_CONFIG = {
@@ -42,6 +44,7 @@ export function IntegrationCard({
   clientId,
   provider,
   onConnect,
+  onView,
 }: IntegrationCardProps) {
   const status = provider.integration?.status ?? "NOT_CONNECTED";
   const config =
@@ -52,11 +55,15 @@ export function IntegrationCard({
 
   const disconnect = useDisconnect(clientId, provider.id);
   const sync = useSync(clientId, provider.id);
+  const dataPoints = PROVIDER_DATA_POINTS[provider.name] ?? [];
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4 hover:shadow-md transition-shadow">
-      {/* Header */}
-      <div className="flex items-start gap-3">
+      {/* Header — clickable when connected */}
+      <div
+        className={`flex items-start gap-3 ${isConnected && onView ? "cursor-pointer group/header" : ""}`}
+        onClick={isConnected && onView ? () => onView(provider) : undefined}
+      >
         <img
           src={provider.logoUrl}
           alt={provider.name}
@@ -68,7 +75,9 @@ export function IntegrationCard({
           }}
         />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-900 truncate">
+          <p
+            className={`text-sm font-semibold text-slate-900 truncate ${isConnected && onView ? "group-hover/header:text-brand-600 transition-colors" : ""}`}
+          >
             {provider.name}
           </p>
           <p className="text-[11px] text-slate-400 mt-0.5">
@@ -87,6 +96,30 @@ export function IntegrationCard({
       <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">
         {provider.description}
       </p>
+
+      {/* Data points tracked */}
+      {dataPoints.length > 0 && (
+        <div>
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            Tracks
+          </p>
+          <div className="flex gap-1 flex-wrap">
+            {dataPoints.slice(0, 4).map((point) => (
+              <span
+                key={point}
+                className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-medium rounded border border-indigo-100"
+              >
+                {point}
+              </span>
+            ))}
+            {dataPoints.length > 4 && (
+              <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-400 text-[10px] rounded border border-indigo-100">
+                +{dataPoints.length - 4}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Module tags */}
       <div className="flex gap-1 flex-wrap">

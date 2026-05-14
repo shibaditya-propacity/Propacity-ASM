@@ -61,5 +61,14 @@ export const OAuthCallbackQuerySchema = z.object({
   state: z.string().optional(),
   providerId: z.string().optional(),
   error: z.string().optional(),
+  error_description: z.string().optional(),
 });
 export type OAuthCallbackQuery = z.infer<typeof OAuthCallbackQuerySchema>;
+
+// ── Init connect (OAuth providers) ───────────────────────────────────────────
+
+export const InitConnectParamSchema = z.object({
+  clientId: z.string().min(1),
+  providerId: z.string().min(1),
+});
+export type InitConnectParam = z.infer<typeof InitConnectParamSchema>;

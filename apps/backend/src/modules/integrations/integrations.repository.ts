@@ -1,5 +1,5 @@
 import { prisma } from "@/core/prisma/client";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import type { SyncLogsQuery } from "./integrations.dto";
 
 // ── Row types ─────────────────────────────────────────────────────────────────
@@ -288,7 +288,8 @@ export class IntegrationsRepository {
         accountLabel: data.accountLabel ?? null,
         credentials: data.credentials ?? {},
         lastSyncAt: data.lastSyncAt ?? null,
-        metadata: data.metadata ?? null,
+        // Prisma nullable JSON: use Prisma.JsonNull to set explicit null
+        metadata: data.metadata ?? Prisma.JsonNull,
       },
       update: {
         status: data.status,
@@ -299,7 +300,9 @@ export class IntegrationsRepository {
           credentials: data.credentials,
         }),
         ...(data.lastSyncAt !== undefined && { lastSyncAt: data.lastSyncAt }),
-        ...(data.metadata !== undefined && { metadata: data.metadata }),
+        ...(data.metadata !== undefined && {
+          metadata: data.metadata ?? Prisma.JsonNull,
+        }),
         updatedAt: new Date(),
       },
       include: { provider: true },

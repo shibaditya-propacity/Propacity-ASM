@@ -1,6 +1,12 @@
 /**
  * Idempotent seed script — run with: pnpm db:seed
  * Seeds all 34 integration providers. Safe to re-run.
+ *
+ * Logo URL rules:
+ *  - Use https://cdn.simpleicons.org/{slug} (no color param) for icons that
+ *    exist in SimpleIcons — the CDN color-path feature is inconsistently cached.
+ *  - Use https://placehold.co/40x40/{bg}/{fg}?text={XX} for tools that have
+ *    no SimpleIcons entry (niche SEO tools, Indian real-estate portals, etc.).
  */
 import { PrismaClient } from "@prisma/client";
 
@@ -13,6 +19,7 @@ const PROVIDERS: Array<{
   authType: string;
   logoUrl: string;
   moduleRelevance: string[];
+  isActive?: boolean;
 }> = [
   // Ad Platforms
   {
@@ -21,8 +28,9 @@ const PROVIDERS: Array<{
     description:
       "Facebook and Instagram advertising platform for campaign management and audience targeting.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/meta/0866FF",
+    logoUrl: "https://cdn.simpleicons.org/meta",
     moduleRelevance: ["Ads", "Social", "Reputation"],
+    isActive: false, // disabled — Meta developer account pending approval
   },
   {
     name: "Google Ads",
@@ -30,7 +38,7 @@ const PROVIDERS: Array<{
     description:
       "Google's advertising platform for search, display, and YouTube campaigns.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/googleads/4285F4",
+    logoUrl: "https://cdn.simpleicons.org/googleads",
     moduleRelevance: ["Ads"],
   },
   {
@@ -39,7 +47,7 @@ const PROVIDERS: Array<{
     description:
       "Professional audience advertising platform for B2B and real-estate developer targeting.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/linkedin/0A66C2",
+    logoUrl: "https://cdn.simpleicons.org/linkedin",
     moduleRelevance: ["Ads", "Social"],
   },
   {
@@ -48,7 +56,7 @@ const PROVIDERS: Array<{
     description:
       "Video advertising via Google Ads for YouTube pre-roll and discovery campaigns.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/youtube/FF0000",
+    logoUrl: "https://cdn.simpleicons.org/youtube",
     moduleRelevance: ["Ads", "Social"],
   },
   {
@@ -56,7 +64,7 @@ const PROVIDERS: Array<{
     category: "AdPlatforms",
     description: "Automated programmatic display advertising via DSP partners.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/googletagmanager/246FDB",
+    logoUrl: "https://cdn.simpleicons.org/googletagmanager",
     moduleRelevance: ["Ads"],
   },
   {
@@ -65,7 +73,7 @@ const PROVIDERS: Array<{
     description:
       "Over-the-top and connected TV advertising for streaming platform campaigns.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/amazonaws/FF9900",
+    logoUrl: "https://placehold.co/40x40/FF9900/ffffff?text=OT",
     moduleRelevance: ["Ads"],
   },
 
@@ -76,7 +84,7 @@ const PROVIDERS: Array<{
     description:
       "Next-generation web and app analytics with event-based tracking and AI-powered insights.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/googleanalytics/E37400",
+    logoUrl: "https://cdn.simpleicons.org/googleanalytics",
     moduleRelevance: ["Ads", "SEO", "Website"],
   },
   {
@@ -85,7 +93,7 @@ const PROVIDERS: Array<{
     description:
       "Monitor and troubleshoot your site's presence in Google Search results.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/googlesearchconsole/458CF5",
+    logoUrl: "https://cdn.simpleicons.org/googlesearchconsole",
     moduleRelevance: ["Ads", "SEO", "Website"],
   },
   {
@@ -94,7 +102,7 @@ const PROVIDERS: Array<{
     description:
       "Manage and deploy marketing tags without modifying the site code.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/googletagmanager/246FDB",
+    logoUrl: "https://cdn.simpleicons.org/googletagmanager",
     moduleRelevance: ["Ads", "Website"],
   },
   {
@@ -103,7 +111,7 @@ const PROVIDERS: Array<{
     description:
       "Heatmaps, session recordings, and user feedback to understand behaviour on your site.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/hotjar/FD3A5C",
+    logoUrl: "https://cdn.simpleicons.org/hotjar",
     moduleRelevance: ["Ads", "Website"],
   },
   {
@@ -112,7 +120,7 @@ const PROVIDERS: Array<{
     description:
       "Free heatmap and session recording tool by Microsoft for UX analysis.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/microsoftazure/0078D4",
+    logoUrl: "https://cdn.simpleicons.org/microsoftclarity",
     moduleRelevance: ["Ads", "Website"],
   },
 
@@ -123,7 +131,7 @@ const PROVIDERS: Array<{
     description:
       "All-in-one SEO toolkit for keyword research, competitive analysis, and site audits.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/semrush/FF642D",
+    logoUrl: "https://cdn.simpleicons.org/semrush",
     moduleRelevance: ["Ads", "SEO"],
   },
   {
@@ -132,7 +140,7 @@ const PROVIDERS: Array<{
     description:
       "Backlink checker, keyword explorer, and site audit platform for SEO professionals.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/ahrefs/FF7D00",
+    logoUrl: "https://placehold.co/40x40/FF7D00/ffffff?text=AH",
     moduleRelevance: ["Ads", "SEO"],
   },
   {
@@ -141,7 +149,7 @@ const PROVIDERS: Array<{
     description:
       "SEO software for link building, keyword research, and site crawl analysis.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/moz/1D62E0",
+    logoUrl: "https://placehold.co/40x40/1D62E0/ffffff?text=MZ",
     moduleRelevance: ["SEO"],
   },
   {
@@ -150,7 +158,7 @@ const PROVIDERS: Array<{
     description:
       "Website crawler for technical SEO audits, broken link checking, and metadata review.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/screamingfrog/FFCC00",
+    logoUrl: "https://placehold.co/40x40/FFCC00/000000?text=SF",
     moduleRelevance: ["Ads", "SEO", "Website"],
   },
 
@@ -161,7 +169,7 @@ const PROVIDERS: Array<{
     description:
       "Manage your business listing, reviews, and photos on Google Search and Maps.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/googlemybusiness/4285F4",
+    logoUrl: "https://cdn.simpleicons.org/googlemybusiness",
     moduleRelevance: ["SEO", "Reputation", "Social"],
   },
   {
@@ -170,7 +178,7 @@ const PROVIDERS: Array<{
     description:
       "India's leading property portal for listings, leads, and developer brand visibility.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/homeadvisor/FF6600",
+    logoUrl: "https://placehold.co/40x40/FF6600/ffffff?text=MB",
     moduleRelevance: ["Reputation"],
   },
   {
@@ -179,7 +187,7 @@ const PROVIDERS: Array<{
     description:
       "Real-estate listing platform for property visibility and lead generation in India.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/realtor/D92228",
+    logoUrl: "https://placehold.co/40x40/D92228/ffffff?text=9A",
     moduleRelevance: ["Reputation"],
   },
   {
@@ -188,7 +196,7 @@ const PROVIDERS: Array<{
     description:
       "PropTech platform for property listings, virtual tours, and buyer insights.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/housedotcom/0070EF",
+    logoUrl: "https://placehold.co/40x40/0070EF/ffffff?text=HG",
     moduleRelevance: ["Reputation"],
   },
   {
@@ -197,7 +205,7 @@ const PROVIDERS: Array<{
     description:
       "Enterprise real-estate consultancy data feed for project listings and market analytics.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/zillow/1277E1",
+    logoUrl: "https://placehold.co/40x40/1277E1/ffffff?text=JL",
     moduleRelevance: ["Reputation"],
   },
 
@@ -208,7 +216,7 @@ const PROVIDERS: Array<{
     description:
       "Connect Instagram Business to pull post performance, follower growth, and story metrics.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/instagram/E4405F",
+    logoUrl: "https://cdn.simpleicons.org/instagram",
     moduleRelevance: ["Social", "Reputation"],
   },
   {
@@ -217,7 +225,7 @@ const PROVIDERS: Array<{
     description:
       "Sync LinkedIn Company Page analytics for follower demographics and post engagement.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/linkedin/0A66C2",
+    logoUrl: "https://cdn.simpleicons.org/linkedin",
     moduleRelevance: ["Social", "Reputation"],
   },
   {
@@ -226,7 +234,7 @@ const PROVIDERS: Array<{
     description:
       "Pull YouTube channel analytics including views, watch time, and subscriber trends.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/youtube/FF0000",
+    logoUrl: "https://cdn.simpleicons.org/youtube",
     moduleRelevance: ["Social", "Reputation"],
   },
   {
@@ -235,7 +243,7 @@ const PROVIDERS: Array<{
     description:
       "Monitor brand mentions, follower counts, and tweet engagement on Twitter/X.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/x/000000",
+    logoUrl: "https://cdn.simpleicons.org/x",
     moduleRelevance: ["Social", "Reputation"],
   },
 
@@ -246,7 +254,7 @@ const PROVIDERS: Array<{
     description:
       "Receive ASM alerts, report digests, and audit notifications in Slack channels.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/slack/4A154B",
+    logoUrl: "https://cdn.simpleicons.org/slack",
     moduleRelevance: [],
   },
   {
@@ -255,7 +263,7 @@ const PROVIDERS: Array<{
     description:
       "Send automated lead follow-ups and campaign updates via WhatsApp Business API.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/whatsapp/25D366",
+    logoUrl: "https://cdn.simpleicons.org/whatsapp",
     moduleRelevance: ["Social", "Promoter"],
   },
 
@@ -266,7 +274,7 @@ const PROVIDERS: Array<{
     description:
       "India's leading payment gateway for booking payments, token collections, and refunds.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/razorpay/3395FF",
+    logoUrl: "https://cdn.simpleicons.org/razorpay",
     moduleRelevance: ["Launch"],
   },
   {
@@ -275,7 +283,7 @@ const PROVIDERS: Array<{
     description:
       "Global payments platform for subscriptions, one-time charges, and invoicing.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/stripe/635BFF",
+    logoUrl: "https://cdn.simpleicons.org/stripe",
     moduleRelevance: ["Launch"],
   },
   {
@@ -284,7 +292,7 @@ const PROVIDERS: Array<{
     description:
       "Cloud accounting platform for invoices, expenses, and financial reporting.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/zoho/E42527",
+    logoUrl: "https://cdn.simpleicons.org/zoho",
     moduleRelevance: [],
   },
   {
@@ -293,7 +301,7 @@ const PROVIDERS: Array<{
     description:
       "India's widely-used accounting software for real-estate developer bookkeeping.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/amazonaws/FF9900",
+    logoUrl: "https://placehold.co/40x40/0057A8/ffffff?text=TP",
     moduleRelevance: [],
   },
 
@@ -304,7 +312,7 @@ const PROVIDERS: Array<{
     description:
       "Enterprise CRM for lead management, sales pipeline, and customer journey tracking.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/salesforce/00A1E0",
+    logoUrl: "https://cdn.simpleicons.org/salesforce",
     moduleRelevance: [],
   },
   {
@@ -313,7 +321,7 @@ const PROVIDERS: Array<{
     description:
       "Marketing and CRM platform for lead capture, nurturing, and deal management.",
     authType: "OAUTH2",
-    logoUrl: "https://cdn.simpleicons.org/hubspot/FF7A59",
+    logoUrl: "https://cdn.simpleicons.org/hubspot",
     moduleRelevance: [],
   },
 
@@ -324,7 +332,7 @@ const PROVIDERS: Array<{
     description:
       "DNS, CDN, and security platform for website performance and DDoS protection.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/cloudflare/F48120",
+    logoUrl: "https://cdn.simpleicons.org/cloudflare",
     moduleRelevance: ["Ads", "Website"],
   },
 
@@ -335,7 +343,7 @@ const PROVIDERS: Array<{
     description:
       "Claude AI for content generation, copy review, and brand voice automation.",
     authType: "API_KEY",
-    logoUrl: "https://cdn.simpleicons.org/anthropic/D97757",
+    logoUrl: "https://cdn.simpleicons.org/anthropic",
     moduleRelevance: ["Reputation"],
   },
 ];
@@ -345,6 +353,7 @@ async function main() {
   let upserted = 0;
 
   for (const p of PROVIDERS) {
+    const active = p.isActive ?? true;
     await prisma.provider.upsert({
       where: { name: p.name },
       update: {
@@ -353,7 +362,7 @@ async function main() {
         authType: p.authType,
         logoUrl: p.logoUrl,
         moduleRelevance: p.moduleRelevance,
-        isActive: true,
+        isActive: active,
       },
       create: {
         name: p.name,
@@ -362,7 +371,7 @@ async function main() {
         authType: p.authType,
         logoUrl: p.logoUrl,
         moduleRelevance: p.moduleRelevance,
-        isActive: true,
+        isActive: active,
       },
     });
     upserted++;
