@@ -155,6 +155,10 @@ export async function detectGoogleAccountLabel(
   }
 }
 
+// Permission levels that can query the searchAnalytics API.
+// siteRestrictedUser can list the site but cannot run analytics queries.
+const GSC_QUERYABLE_PERMISSIONS = new Set(["siteOwner", "siteFullUser"]);
+
 async function detectSearchConsoleSite(
   accessToken: string,
 ): Promise<string | null> {
@@ -163,9 +167,14 @@ async function detectSearchConsoleSite(
   });
   if (!res.ok) return null;
   const data = (await res.json()) as {
-    siteEntry?: Array<{ siteUrl: string }>;
+    siteEntry?: Array<{ siteUrl: string; permissionLevel: string }>;
   };
-  return data.siteEntry?.[0]?.siteUrl ?? null;
+  const sites = data.siteEntry ?? [];
+  // Prefer a site where we can actually run analytics queries
+  const queryable = sites.find((s) =>
+    GSC_QUERYABLE_PERMISSIONS.has(s.permissionLevel),
+  );
+  return (queryable ?? sites[0])?.siteUrl ?? null;
 }
 
 async function detectGA4Property(accessToken: string): Promise<string | null> {

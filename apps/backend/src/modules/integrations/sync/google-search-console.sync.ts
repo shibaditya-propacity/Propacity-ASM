@@ -57,11 +57,48 @@ export interface GscSyncResult {
   recordsSynced: number;
 }
 
+// Permission levels that allow querying the searchAnalytics API.
+const QUERYABLE_PERMISSIONS = new Set(["siteOwner", "siteFullUser"]);
+
+async function checkSitePermission(
+  accessToken: string,
+  siteUrl: string,
+): Promise<void> {
+  const res = await fetch(
+    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } },
+  );
+  if (!res.ok) {
+    if (res.status === 403 || res.status === 404) {
+      throw new Error(
+        `Site "${siteUrl}" was not found in your Search Console account. ` +
+          `Open the integration settings and set the correct verified property URL.`,
+      );
+    }
+    return; // non-fatal — let the query attempt surface its own error
+  }
+  const site = (await res.json()) as {
+    siteUrl: string;
+    permissionLevel: string;
+  };
+  if (!QUERYABLE_PERMISSIONS.has(site.permissionLevel)) {
+    throw new Error(
+      `Your Google account has "${site.permissionLevel}" access to "${siteUrl}". ` +
+        `Querying search analytics requires siteFullUser or siteOwner permission. ` +
+        `Connect with the account that owns this property in Search Console.`,
+    );
+  }
+}
+
 export async function syncGoogleSearchConsole(
   credentials: StoredCredentials,
   accessToken: string,
   siteUrl: string,
 ): Promise<GscSyncResult> {
+  // Pre-flight: verify the account has queryable permission for this site.
+  // This surfaces a clear error instead of a raw 403 from the analytics API.
+  await checkSitePermission(accessToken, siteUrl);
+
   const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 28 * 86400_000)
     .toISOString()
