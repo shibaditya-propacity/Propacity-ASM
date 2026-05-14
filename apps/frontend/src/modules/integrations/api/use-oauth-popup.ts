@@ -63,11 +63,9 @@ export function useOAuthPopup({
 
     popupRef.current = popup;
 
-    // 3. Listen for the postMessage sent by the backend callback HTML
-    const handler = (event: MessageEvent<OAuthMessage>) => {
-      if (!event.data?.type) return;
-
-      if (event.data.type === "oauth-success") {
+    function handleMessage(msg: OAuthMessage) {
+      if (!msg?.type) return;
+      if (msg.type === "oauth-success") {
         cleanup();
         queryClient.invalidateQueries({
           queryKey: integrationKeys.providers(clientId),
@@ -76,32 +74,63 @@ export function useOAuthPopup({
           queryKey: integrationKeys.readiness(clientId),
         });
         queryClient.invalidateQueries({ queryKey: integrationKeys.matrix() });
-        onSuccess?.(event.data.provider ?? "");
-      } else if (event.data.type === "oauth-error") {
+        onSuccess?.(msg.provider ?? "");
+      } else if (msg.type === "oauth-error") {
         cleanup();
-        onError?.(event.data.description ?? event.data.error ?? "OAuth failed");
+        onError?.(msg.description ?? msg.error ?? "OAuth failed");
       }
-    };
+    }
 
+    // 3a. BroadcastChannel — primary channel, COOP-safe (Google sets COOP:
+    //     same-origin which severs window.opener in the callback page).
+    let bc: BroadcastChannel | null = null;
+    try {
+      bc = new BroadcastChannel("oauth_result");
+      bc.onmessage = (e: MessageEvent<OAuthMessage>) => handleMessage(e.data);
+    } catch {
+      // BroadcastChannel not supported — fall through to postMessage only
+    }
+
+    // 3b. window.postMessage — fallback for browsers without BroadcastChannel
+    const handler = (event: MessageEvent<OAuthMessage>) => {
+      if (!event.data?.type) return;
+      handleMessage(event.data);
+    };
     listenerRef.current = handler;
     window.addEventListener("message", handler);
 
-    // 4. Detect if popup was closed manually without completing auth
+    // 4. Detect if popup was closed manually without completing auth.
+    //    Wrap in try/catch — COOP may throw when reading popup.closed after
+    //    the opener relationship is severed by Google's OAuth pages.
     const pollClosed = setInterval(() => {
-      if (popup.closed) {
+      try {
+        if (popup.closed) {
+          clearInterval(pollClosed);
+          cleanup();
+        }
+      } catch {
+        // COOP blocked the read — stop polling, leave cleanup to the message handler
         clearInterval(pollClosed);
-        cleanup();
       }
     }, 500);
 
     function cleanup() {
       clearInterval(pollClosed);
+      if (bc) {
+        bc.onmessage = null;
+        bc.close();
+        bc = null;
+      }
       if (listenerRef.current) {
         window.removeEventListener("message", listenerRef.current);
         listenerRef.current = null;
       }
-      if (popupRef.current && !popupRef.current.closed) {
-        popupRef.current.close();
+      try {
+        if (popupRef.current && !popupRef.current.closed) {
+          popupRef.current.close();
+        }
+      } catch {
+        // COOP may block this too — ignore
       }
       popupRef.current = null;
     }

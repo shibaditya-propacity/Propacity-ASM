@@ -16,10 +16,18 @@ import type {
 } from "./integrations.dto";
 
 // Small HTML page sent inside the OAuth popup to close it and notify the opener.
+// Uses BroadcastChannel as the primary channel (COOP-safe) and falls back to
+// window.opener.postMessage for browsers without BroadcastChannel support.
 function popupHtml(payload: Record<string, unknown>): string {
   const json = JSON.stringify(payload);
   return `<!DOCTYPE html><html><body><script>
-    try { window.opener && window.opener.postMessage(${json}, '*'); } catch(e){}
+    var msg = ${json};
+    try {
+      var bc = new BroadcastChannel('oauth_result');
+      bc.postMessage(msg);
+      bc.close();
+    } catch(e){}
+    try { window.opener && window.opener.postMessage(msg, '*'); } catch(e){}
     setTimeout(function(){ window.close(); }, 300);
   </script></body></html>`;
 }

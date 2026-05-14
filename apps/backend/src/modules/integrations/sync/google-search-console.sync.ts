@@ -82,6 +82,13 @@ export async function syncGoogleSearchConsole(
   });
 
   if (!aggregateRes.ok) {
+    if (aggregateRes.status === 403) {
+      throw new Error(
+        `Your Google account does not have permission for site "${siteUrl}". ` +
+          `Open the integration settings, update the site URL to a property ` +
+          `you own in Search Console, then sync again.`,
+      );
+    }
     const body = await aggregateRes.text();
     throw new Error(`GSC aggregate query failed: ${body}`);
   }
