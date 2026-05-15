@@ -79,19 +79,28 @@ None currently.
 
 ## Background jobs
 
-None currently. Sync is triggered synchronously on the HTTP request. Long-running syncs should be moved to a `integrations-sync` BullMQ queue in a future iteration.
+| Queue               | Worker file              | Concurrency | Retries                            |
+| ------------------- | ------------------------ | ----------- | ---------------------------------- |
+| `integrations-sync` | `integrations.worker.ts` | 5           | 3 × exponential (5 s, 25 s, 125 s) |
+
+`POST /:clientId/:providerId/sync` now returns `{ syncLogId, status: "IN_PROGRESS" }` immediately.
+The worker picks up the job, runs the sync handler, and writes `SUCCESS` or `FAILED` to the SyncLog.
+The frontend polls sync-logs to reflect the final status.
+
+Queue and Redis connection are defined in `src/core/queue/`.
 
 ## Environment variables required
 
 ```
-GOOGLE_CLIENT_ID          — Google OAuth app client ID
-GOOGLE_CLIENT_SECRET      — Google OAuth app client secret
-GOOGLE_REDIRECT_URI       — must match Google Cloud Console registered URI
+GOOGLE_CLIENT_ID           — Google OAuth app client ID
+GOOGLE_CLIENT_SECRET       — Google OAuth app client secret
+GOOGLE_REDIRECT_URI        — must match Google Cloud Console registered URI
 GOOGLE_ADS_DEVELOPER_TOKEN — required only for Google Ads sync
-META_APP_ID               — Meta app ID
-META_APP_SECRET           — Meta app secret
-META_REDIRECT_URI         — must match Meta App Dashboard registered URI
+META_APP_ID                — Meta app ID
+META_APP_SECRET            — Meta app secret
+META_REDIRECT_URI          — must match Meta App Dashboard registered URI
 CREDENTIALS_ENCRYPTION_KEY — 64-char hex AES-256 key for token encryption
+REDIS_URL                  — Redis connection string (default: redis://localhost:6379)
 ```
 
 ## Open questions
