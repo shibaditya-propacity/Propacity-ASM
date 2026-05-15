@@ -26,6 +26,16 @@ const controller = new IntegrationsController(service);
 export function registerIntegrationsRoutes(router: Router): void {
   const r = Router();
 
+  // ── OAuth callback — PUBLIC (no auth) ──────────────────────────────────────
+  // Google redirects here after consent. The redirect carries no Authorization
+  // header, so this must be registered before authGuard/tenantGuard.
+
+  r.get(
+    "/oauth/callback",
+    validate({ query: OAuthCallbackQuerySchema }),
+    controller.oauthCallback,
+  );
+
   r.use(authGuard);
   r.use(tenantGuard);
 
@@ -43,15 +53,6 @@ export function registerIntegrationsRoutes(router: Router): void {
   // ── Matrix (all clients × providers) ──────────────────────────────────────
 
   r.get("/matrix", controller.getMatrix);
-
-  // ── OAuth callback ─────────────────────────────────────────────────────────
-  // Must be before /:clientId.
-
-  r.get(
-    "/oauth/callback",
-    validate({ query: OAuthCallbackQuerySchema }),
-    controller.oauthCallback,
-  );
 
   r.post(
     "/oauth/refresh/:integrationId",

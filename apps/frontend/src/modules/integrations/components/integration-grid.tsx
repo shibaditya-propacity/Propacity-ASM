@@ -3,6 +3,7 @@ import type { ProviderWithStatus } from "../types";
 import { IntegrationCard } from "./integration-card";
 import { ConnectModal } from "./connect-modal";
 import { CategoryTabs } from "./category-tabs";
+import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 
 interface IntegrationGridProps {
   clientId: string;
@@ -12,6 +13,8 @@ interface IntegrationGridProps {
 export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
   const [activeCategory, setActiveCategory] = useState("All");
   const [connecting, setConnecting] = useState<ProviderWithStatus | null>(null);
+  const [detailProvider, setDetailProvider] =
+    useState<ProviderWithStatus | null>(null);
 
   const categories = [...new Set(providers.map((p) => p.category))].sort();
 
@@ -42,6 +45,7 @@ export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
               clientId={clientId}
               provider={provider}
               onConnect={setConnecting}
+              onDetails={setDetailProvider}
             />
           ))}
         </div>
@@ -52,6 +56,14 @@ export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
           clientId={clientId}
           provider={connecting}
           onClose={() => setConnecting(null)}
+        />
+      )}
+
+      {detailProvider && (
+        <IntegrationDetailDrawer
+          clientId={clientId}
+          provider={detailProvider}
+          onClose={() => setDetailProvider(null)}
         />
       )}
     </div>
