@@ -38,6 +38,16 @@ export function registerIntegrationsRoutes(router: Router): void {
 
   const r = Router();
 
+  // ── OAuth callback — PUBLIC (no auth) ──────────────────────────────────────
+  // Google redirects here after consent. The redirect carries no Authorization
+  // header, so this must be registered before authGuard/tenantGuard.
+
+  r.get(
+    "/oauth/callback",
+    validate({ query: OAuthCallbackQuerySchema }),
+    controller.oauthCallback,
+  );
+
   r.use(authGuard);
   r.use(tenantGuard);
 
