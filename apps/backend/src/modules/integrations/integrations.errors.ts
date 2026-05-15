@@ -66,3 +66,37 @@ export class InvalidAuthTypeError extends AppError {
     });
   }
 }
+
+export class OAuthUnsupportedProviderError extends AppError {
+  constructor(providerName: string) {
+    super({
+      code: "INTEGRATIONS_OAUTH_UNSUPPORTED_PROVIDER",
+      message: `No OAuth handler registered for provider: ${providerName}`,
+      publicMessage: "OAuth is not supported for this provider yet.",
+      statusCode: 400,
+    });
+  }
+}
+
+export class OAuthTokenRefreshError extends AppError {
+  constructor(detail: string) {
+    super({
+      code: "INTEGRATIONS_OAUTH_REFRESH_FAILED",
+      message: `OAuth token refresh failed: ${detail}`,
+      publicMessage:
+        "Your session has expired. Please reconnect this integration.",
+      statusCode: 422,
+    });
+  }
+}
+
+export class OAuthCallbackError extends AppError {
+  constructor(detail: string) {
+    super({
+      code: "INTEGRATIONS_OAUTH_CALLBACK_ERROR",
+      message: `OAuth callback error: ${detail}`,
+      publicMessage: "Authorization failed. Please try connecting again.",
+      statusCode: 400,
+    });
+  }
+}

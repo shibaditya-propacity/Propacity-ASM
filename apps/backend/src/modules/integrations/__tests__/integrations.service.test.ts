@@ -113,17 +113,23 @@ describe("IntegrationsService", () => {
   });
 
   describe("disconnect", () => {
-    it("deletes the integration when it exists", async () => {
+    it("sets integration to NOT_CONNECTED (preserves row for history)", async () => {
       vi.mocked(repo.findClientById).mockResolvedValue(MOCK_CLIENT);
       vi.mocked(repo.findIntegration).mockResolvedValue(MOCK_INTEGRATION);
-      vi.mocked(repo.deleteIntegration).mockResolvedValue();
+      vi.mocked(repo.findProviderById).mockResolvedValue(MOCK_PROVIDER);
+      vi.mocked(repo.upsertIntegration).mockResolvedValue({
+        ...MOCK_INTEGRATION,
+        status: "NOT_CONNECTED",
+        credentials: {},
+      });
 
       await service.disconnect("tenant-1", "client-1", "prov-1");
 
-      expect(repo.deleteIntegration).toHaveBeenCalledWith(
+      expect(repo.upsertIntegration).toHaveBeenCalledWith(
         "tenant-1",
         "client-1",
         "prov-1",
+        expect.objectContaining({ status: "NOT_CONNECTED" }),
       );
     });
 
