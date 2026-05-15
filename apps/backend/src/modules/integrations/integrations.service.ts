@@ -41,6 +41,8 @@ import { syncGoogleAnalytics } from "./sync/google-analytics.sync";
 import { syncGoogleAds } from "./sync/google-ads.sync";
 import { syncMetaAds } from "./sync/meta-ads.sync";
 import type { Prisma } from "@prisma/client";
+import { syncQueue } from "@/core/queue/sync.queue";
+import type { SyncJobPayload } from "@/core/queue/queue.types";
 
 // ── Provider classification ───────────────────────────────────────────────────
 
@@ -346,6 +348,11 @@ export class IntegrationsService {
 
   // ── Sync ───────────────────────────────────────────────────────────────────
 
+  /**
+   * Validates the integration, creates a SyncLog row set to IN_PROGRESS,
+   * and enqueues a job on the `integrations-sync` BullMQ queue.
+   * Returns immediately — the actual API call happens in the worker.
+   */
   async triggerSync(
     tenantId: string,
     clientId: string,
@@ -361,13 +368,50 @@ export class IntegrationsService {
     if (integration.status === "NOT_CONNECTED")
       throw new IntegrationNotConnectedError();
 
-    const provider = await this.repo.findProviderById(providerId);
-    if (!provider) throw new ProviderNotFoundError(providerId);
-
     const syncLog = await this.repo.createSyncLog(
       integration.id,
       "IN_PROGRESS",
     );
+
+    const payload: SyncJobPayload = {
+      tenantId,
+      clientId,
+      providerId,
+      integrationId: integration.id,
+      syncLogId: syncLog.id,
+    };
+
+    await syncQueue.add(
+      `sync:${integration.id}`,
+      payload,
+      // Deduplicate: if the same integration is already queued or running,
+      // skip adding a second job to prevent overlapping syncs.
+      { jobId: `sync:${integration.id}:${syncLog.id}` },
+    );
+
+    return { syncLogId: syncLog.id, status: "IN_PROGRESS" };
+  }
+
+  /**
+   * Executes the actual sync for a single integration.
+   * Called by the BullMQ worker — not directly from HTTP handlers.
+   * Writes SUCCESS or FAILED to the SyncLog on completion.
+   */
+  async runSync(payload: SyncJobPayload): Promise<void> {
+    const { tenantId, clientId, providerId, syncLogId } = payload;
+
+    const [integration, provider] = await Promise.all([
+      this.repo.findIntegration(tenantId, clientId, providerId),
+      this.repo.findProviderById(providerId),
+    ]);
+
+    if (!integration || !provider) {
+      await this.repo.updateSyncLog(syncLogId, {
+        status: "FAILED",
+        errorMessage: "Integration or provider no longer exists.",
+      });
+      return;
+    }
 
     try {
       // Auto-refresh expired tokens
@@ -385,7 +429,6 @@ export class IntegrationsService {
         : ((stored as unknown as { apiKey?: string })?.apiKey ?? "");
 
       // Auto-detect accountLabel for Google providers if it was never saved
-      // (can happen when OAuth was connected before the API was enabled)
       let accountLabel = integration.accountLabel ?? "";
       if (!accountLabel && isGoogleProvider(provider.name)) {
         const detected = await detectGoogleAccountLabel(
@@ -414,10 +457,7 @@ export class IntegrationsService {
           accessToken,
           accountLabel,
         );
-        result = {
-          recordsSynced: data.recordsSynced,
-          metadata: data,
-        };
+        result = { recordsSynced: data.recordsSynced, metadata: data };
       } else if (provider.name === "Google Analytics 4") {
         const data = await syncGoogleAnalytics(accessToken, accountLabel);
         result = { recordsSynced: data.recordsSynced, metadata: data };
@@ -428,35 +468,24 @@ export class IntegrationsService {
         const data = await syncMetaAds(accessToken, accountLabel);
         result = { recordsSynced: data.recordsSynced, metadata: data };
       } else {
-        // Generic provider — mark as synced with 0 records
         result = { recordsSynced: 0, metadata: null };
       }
 
-      await this.repo.updateSyncLog(syncLog.id, {
+      await this.repo.updateSyncLog(syncLogId, {
         status: "SUCCESS",
         recordsSynced: result.recordsSynced,
       });
 
-      await this.repo.updateIntegrationStatus(
-        tenantId,
-        clientId,
-        providerId,
-        "CONNECTED",
-        { lastSyncAt: new Date() },
-      );
-
-      if (result.metadata) {
-        await this.repo.upsertIntegration(tenantId, clientId, providerId, {
-          status: "CONNECTED",
-          metadata: result.metadata as unknown as Prisma.InputJsonValue,
-          lastSyncAt: new Date(),
-        });
-      }
-
-      return { syncLogId: syncLog.id, status: "SUCCESS" };
+      await this.repo.upsertIntegration(tenantId, clientId, providerId, {
+        status: "CONNECTED",
+        lastSyncAt: new Date(),
+        ...(result.metadata
+          ? { metadata: result.metadata as Prisma.InputJsonValue }
+          : {}),
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      await this.repo.updateSyncLog(syncLog.id, {
+      await this.repo.updateSyncLog(syncLogId, {
         status: "FAILED",
         errorMessage: msg,
       });
@@ -466,6 +495,7 @@ export class IntegrationsService {
         providerId,
         "ERROR",
       );
+      // Re-throw so BullMQ records the failure and applies retry back-off
       throw err;
     }
   }
