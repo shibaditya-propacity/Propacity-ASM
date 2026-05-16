@@ -28,6 +28,9 @@ model Tenant {
   audits             Audit[]
   clients            Client[]
   integrations       Integration[]
+  seoSnapshots       SeoSnapshot[]
+  seoKeywords        SeoKeyword[]
+  seoActions         SeoAction[]
 }
 
 model User {
@@ -283,6 +286,9 @@ model Client {
   updatedAt DateTime @updatedAt
 
   integrations Integration[]
+  seoSnapshots SeoSnapshot[]
+  seoKeywords  SeoKeyword[]
+  seoActions   SeoAction[]
 
   @@index([tenantId, createdAt])
   @@map("int_clients")
@@ -359,4 +365,77 @@ model PlatformIntegration {
   updatedAt    DateTime @updatedAt
 
   @@map("int_platform_integrations")
+}
+
+// =============================================================
+// MODULE: SEO
+// =============================================================
+
+// Per-client SEO data snapshot captured on each sync run.
+model SeoSnapshot {
+  id              String   @id @default(cuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  syncDate        DateTime @default(now())
+  clicks          Int      @default(0)
+  impressions     Int      @default(0)
+  ctr             Float    @default(0)
+  avgPosition     Float    @default(0)
+  indexedPages    Int      @default(0)
+  crawlErrors     Int      @default(0)
+  mobileIssues    Int      @default(0)
+  topPages        Json     @default("[]")
+  topQueries      Json     @default("[]")
+  organicSessions Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([tenantId, clientId, syncDate])
+  @@index([tenantId, clientId])
+  @@map("seo_snapshots")
+}
+
+// Keywords being actively tracked for a client.
+model SeoKeyword {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  keyword       String
+  currentRank   Int?
+  previousRank  Int?
+  searchVolume  Int?
+  weeklyHistory Json     @default("[]")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([tenantId, clientId, keyword])
+  @@index([tenantId, clientId, createdAt])
+  @@map("seo_keywords")
+}
+
+// Recommended actions generated from each sync run.
+model SeoAction {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  category    String    @default("TECHNICAL") // 'CONTENT' | 'TECHNICAL' | 'SCHEMA' | 'BACKLINKS'
+  impactLevel String    @default("MEDIUM")    // 'HIGH' | 'MEDIUM' | 'LOW'
+  effortLevel String    @default("MEDIUM")    // 'QUICK' | 'MEDIUM' | 'HEAVY'
+  status      String    @default("PENDING")   // 'PENDING' | 'IN_PROGRESS' | 'COMPLETED'
+  assignedTo  String?
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([tenantId, clientId, status])
+  @@index([tenantId, clientId, createdAt])
+  @@map("seo_actions")
 }

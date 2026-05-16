@@ -3,6 +3,7 @@ import { lazy } from "react";
 import { AppShell } from "@/core/layout/app-shell";
 import { growthRoutes } from "@/modules/growth/growth.routes";
 import { integrationsRoutes } from "@/modules/integrations/integrations.routes";
+import { seoRoutes } from "@/modules/seo/seo.routes";
 import { authLoader } from "@/core/auth/loaders";
 
 const SigninPage = lazy(() => import("@/modules/auth/pages/signin.page"));
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/growth" replace /> },
       growthRoutes,
       integrationsRoutes,
+      seoRoutes,
     ],
   },
 ]);

@@ -8,6 +8,7 @@ import {
   BarChart3,
   CalendarPlus,
   Plug,
+  Search,
   X,
   LogOut,
   ChevronLeft,
@@ -40,6 +41,12 @@ const NAV_LINKS = [
     label: "Integrations",
     end: false,
     Icon: Plug,
+  },
+  {
+    to: "/seo",
+    label: "SEO",
+    end: false,
+    Icon: Search,
   },
 ] as const;
 

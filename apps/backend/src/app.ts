@@ -18,6 +18,7 @@ import { GrowthService } from "@/modules/growth/growth.service";
 import { GrowthRepository } from "@/modules/growth/growth.repository";
 import { registerBrandAuditRoutes } from "@/modules/brand-audit/brand-audit.routes";
 import { registerIntegrationsRoutes } from "@/modules/integrations/integrations.routes";
+import { registerSeoRoutes } from "@/modules/seo/seo.routes";
 
 export function createApp(): express.Application {
   const app = express();
@@ -63,6 +64,9 @@ export function createApp(): express.Application {
 
   // Integrations module (self-wired)
   registerIntegrationsRoutes(apiRouter);
+
+  // SEO module (self-wired)
+  registerSeoRoutes(apiRouter);
 
   app.use("/api/v1", apiRouter);
   app.use(errorHandler);
