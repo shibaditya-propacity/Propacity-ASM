@@ -1,17 +1,28 @@
 import type { Request, Response, NextFunction } from "express";
 import { ok, created } from "@/core/http/response";
 import { IntegrationsService } from "./integrations.service";
+import { OAuthCallbackError } from "./integrations.errors";
+import { decryptState } from "./oauth/credentials";
 import type {
   CreateClientInput,
   ClientIdParam,
   ClientProviderParam,
   ProviderIdParam,
   ConnectApiKeyBody,
-  ConnectOAuthBody,
   SyncLogsQuery,
   OAuthCallbackQuery,
   IntegrationIdParam,
+  InitConnectParam,
 } from "./integrations.dto";
+
+// Small HTML page sent inside the OAuth popup to close it and notify the opener.
+function popupHtml(payload: Record<string, unknown>): string {
+  const json = JSON.stringify(payload);
+  return `<!DOCTYPE html><html><body><script>
+    try { window.opener && window.opener.postMessage(${json}, '*'); } catch(e){}
+    setTimeout(function(){ window.close(); }, 300);
+  </script></body></html>`;
+}
 
 export class IntegrationsController {
   constructor(private readonly service: IntegrationsService) {}
@@ -64,7 +75,27 @@ export class IntegrationsController {
     }
   };
 
-  // ── Connect ────────────────────────────────────────────────────────────────
+  // ── OAuth — initiate ───────────────────────────────────────────────────────
+
+  initConnect = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { clientId, providerId } = req.validated.params as InitConnectParam;
+      const result = await this.service.initiateOAuth(
+        req.tenant.id,
+        clientId,
+        providerId,
+      );
+      ok(res, result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ── Connect — API key ──────────────────────────────────────────────────────
 
   connectApiKey = async (
     req: Request,
@@ -76,27 +107,6 @@ export class IntegrationsController {
         .params as ClientProviderParam;
       const body = req.validated.body as ConnectApiKeyBody;
       const integration = await this.service.connectApiKey(
-        req.tenant.id,
-        clientId,
-        providerId,
-        body,
-      );
-      created(res, integration);
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  connectOAuth = async (
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<void> => {
-    try {
-      const { clientId, providerId } = req.validated
-        .params as ClientProviderParam;
-      const body = req.validated.body as ConnectOAuthBody;
-      const integration = await this.service.connectOAuth(
         req.tenant.id,
         clientId,
         providerId,
@@ -173,6 +183,29 @@ export class IntegrationsController {
     }
   };
 
+  // ── Account label (manual override) ───────────────────────────────────────
+
+  updateAccountLabel = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { clientId, providerId } = req.validated
+        .params as ClientProviderParam;
+      const { accountLabel } = req.body as { accountLabel: string };
+      await this.service.updateAccountLabel(
+        req.tenant.id,
+        clientId,
+        providerId,
+        accountLabel ?? "",
+      );
+      ok(res, { success: true });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   // ── Module readiness ───────────────────────────────────────────────────────
 
   getReadiness = async (
@@ -207,29 +240,70 @@ export class IntegrationsController {
     }
   };
 
-  // ── OAuth callback ─────────────────────────────────────────────────────────
+  // ── OAuth — callback (PUBLIC — no authGuard) ───────────────────────────────
 
   oauthCallback = async (
     req: Request,
     res: Response,
     next: NextFunction,
   ): Promise<void> => {
+    const query = req.validated.query as OAuthCallbackQuery;
+
+    // User denied / provider returned an error
+    if (query.error) {
+      res
+        .status(200)
+        .set("Content-Type", "text/html")
+        .send(
+          popupHtml({
+            type: "oauth-error",
+            error: query.error,
+            description: query.error_description ?? "",
+          }),
+        );
+      return;
+    }
+
+    if (!query.code || !query.state) {
+      res
+        .status(200)
+        .set("Content-Type", "text/html")
+        .send(popupHtml({ type: "oauth-error", error: "missing_params" }));
+      return;
+    }
+
     try {
-      const query = req.validated.query as OAuthCallbackQuery;
-      if (query.error) {
-        ok(res, { success: false, error: query.error });
-        return;
-      }
+      const state = decryptState(query.state);
+
       const result = await this.service.handleOAuthCallback(
-        req.tenant.id,
-        query.providerId,
-        query.code ?? "",
+        state.tenantId,
+        state.clientId,
+        state.providerId,
+        query.code,
       );
-      ok(res, result);
+
+      res
+        .status(200)
+        .set("Content-Type", "text/html")
+        .send(
+          popupHtml({
+            type: "oauth-success",
+            provider: result.providerName,
+            clientId: state.clientId,
+            providerId: state.providerId,
+          }),
+        );
     } catch (err) {
-      next(err);
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      void next; // suppress unused warning — we handle the response directly
+      res
+        .status(200)
+        .set("Content-Type", "text/html")
+        .send(popupHtml({ type: "oauth-error", error: msg }));
     }
   };
+
+  // ── OAuth — token refresh ──────────────────────────────────────────────────
 
   refreshToken = async (
     req: Request,
@@ -237,7 +311,12 @@ export class IntegrationsController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      ok(res, { success: true });
+      const { integrationId } = req.validated.params as IntegrationIdParam;
+      const result = await this.service.refreshOAuthToken(
+        req.tenant.id,
+        integrationId,
+      );
+      ok(res, result);
     } catch (err) {
       next(err);
     }
@@ -287,3 +366,6 @@ export class IntegrationsController {
     }
   };
 }
+
+// Silence unused import warning — OAuthCallbackError is thrown when needed
+void OAuthCallbackError;

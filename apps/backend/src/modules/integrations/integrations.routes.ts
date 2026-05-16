@@ -12,9 +12,9 @@ import {
   ProviderIdParamSchema,
   IntegrationIdParamSchema,
   ConnectApiKeyBodySchema,
-  ConnectOAuthBodySchema,
   SyncLogsQuerySchema,
   OAuthCallbackQuerySchema,
+  InitConnectParamSchema,
 } from "./integrations.dto";
 
 // ── Wire up dependencies ───────────────────────────────────────────────────────
@@ -24,7 +24,29 @@ const service = new IntegrationsService(repo);
 const controller = new IntegrationsController(service);
 
 export function registerIntegrationsRoutes(router: Router): void {
+  // ── PUBLIC: OAuth callback ─────────────────────────────────────────────────
+  // Registered directly on the API router to bypass authGuard.
+  // Identity is established via the encrypted state parameter.
+
+  router.get(
+    "/integrations/oauth/callback",
+    validate({ query: OAuthCallbackQuerySchema }),
+    controller.oauthCallback,
+  );
+
+  // ── PROTECTED: all other integrations routes ───────────────────────────────
+
   const r = Router();
+
+  // ── OAuth callback — PUBLIC (no auth) ──────────────────────────────────────
+  // Google redirects here after consent. The redirect carries no Authorization
+  // header, so this must be registered before authGuard/tenantGuard.
+
+  r.get(
+    "/oauth/callback",
+    validate({ query: OAuthCallbackQuerySchema }),
+    controller.oauthCallback,
+  );
 
   r.use(authGuard);
   r.use(tenantGuard);
@@ -44,14 +66,7 @@ export function registerIntegrationsRoutes(router: Router): void {
 
   r.get("/matrix", controller.getMatrix);
 
-  // ── OAuth callback ─────────────────────────────────────────────────────────
-  // Must be before /:clientId.
-
-  r.get(
-    "/oauth/callback",
-    validate({ query: OAuthCallbackQuerySchema }),
-    controller.oauthCallback,
-  );
+  // ── OAuth refresh ──────────────────────────────────────────────────────────
 
   r.post(
     "/oauth/refresh/:integrationId",
@@ -76,7 +91,7 @@ export function registerIntegrationsRoutes(router: Router): void {
     controller.syncPlatform,
   );
 
-  // ── Client-scoped integration routes ──────────────────────────────────────
+  // ── Client-scoped routes ───────────────────────────────────────────────────
 
   // GET /integrations/:clientId — providers + connection status for client
   r.get(
@@ -92,6 +107,14 @@ export function registerIntegrationsRoutes(router: Router): void {
     controller.getReadiness,
   );
 
+  // POST /integrations/:clientId/:providerId/connect
+  // Returns OAuth URL for OAUTH2 providers; frontend opens it in a popup.
+  r.post(
+    "/:clientId/:providerId/connect",
+    validate({ params: InitConnectParamSchema }),
+    controller.initConnect,
+  );
+
   // POST /integrations/:clientId/:providerId/connect/api-key
   r.post(
     "/:clientId/:providerId/connect/api-key",
@@ -100,16 +123,6 @@ export function registerIntegrationsRoutes(router: Router): void {
       body: ConnectApiKeyBodySchema,
     }),
     controller.connectApiKey,
-  );
-
-  // POST /integrations/:clientId/:providerId/connect/oauth
-  r.post(
-    "/:clientId/:providerId/connect/oauth",
-    validate({
-      params: ClientProviderParamSchema,
-      body: ConnectOAuthBodySchema,
-    }),
-    controller.connectOAuth,
   );
 
   // POST /integrations/:clientId/:providerId/disconnect
@@ -124,6 +137,13 @@ export function registerIntegrationsRoutes(router: Router): void {
     "/:clientId/:providerId/sync",
     validate({ params: ClientProviderParamSchema }),
     controller.triggerSync,
+  );
+
+  // PATCH /integrations/:clientId/:providerId/account-label
+  r.patch(
+    "/:clientId/:providerId/account-label",
+    validate({ params: ClientProviderParamSchema }),
+    controller.updateAccountLabel,
   );
 
   // GET /integrations/:clientId/:providerId/sync-logs

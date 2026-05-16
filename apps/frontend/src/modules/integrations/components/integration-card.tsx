@@ -12,12 +12,13 @@ import { useDisconnect } from "../api/use-disconnect";
 import { useSync } from "../api/use-sync";
 import { IntegrationGuideModal } from "./integration-guide-modal";
 import { INTEGRATION_GUIDES } from "./integration-guides";
+import { PROVIDER_DATA_POINTS } from "../provider-data-points";
 
 interface IntegrationCardProps {
   clientId: string;
   provider: ProviderWithStatus;
   onConnect: (provider: ProviderWithStatus) => void;
-  onDetails: (provider: ProviderWithStatus) => void;
+  onView?: (provider: ProviderWithStatus) => void;
 }
 
 const STATUS_CONFIG = {
@@ -47,7 +48,7 @@ export function IntegrationCard({
   clientId,
   provider,
   onConnect,
-  onDetails,
+  onView,
 }: IntegrationCardProps) {
   const status = provider.integration?.status ?? "NOT_CONNECTED";
   const config =
@@ -60,12 +61,13 @@ export function IntegrationCard({
   const disconnect = useDisconnect(clientId, provider.id);
   const sync = useSync(clientId, provider.id);
   const brandColor = INTEGRATION_GUIDES[provider.name]?.brandColor;
+  const dataPoints = PROVIDER_DATA_POINTS[provider.name] ?? [];
 
   return (
     <>
       <div
-        className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow overflow-hidden ${isConnected ? "cursor-pointer" : ""}`}
-        onClick={isConnected ? () => onDetails(provider) : undefined}
+        className={`bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col hover:shadow-md transition-shadow overflow-hidden ${isConnected && onView ? "cursor-pointer" : ""}`}
+        onClick={isConnected && onView ? () => onView(provider) : undefined}
       >
         {/* Brand color top bar */}
         <div
@@ -97,8 +99,10 @@ export function IntegrationCard({
                     setShowGuide(true);
                   }}
                   aria-label={`How to connect ${provider.name}`}
-                  className="shrink-0 text-slate-300 transition-colors hover:opacity-80"
-                  style={brandColor ? { color: brandColor } : undefined}
+                  className="shrink-0 transition-colors hover:opacity-80"
+                  style={
+                    brandColor ? { color: brandColor } : { color: "#cbd5e1" }
+                  }
                 >
                   <Info className="w-3.5 h-3.5" />
                 </button>
@@ -119,6 +123,30 @@ export function IntegrationCard({
           <p className="text-xs text-slate-500 leading-relaxed line-clamp-2 flex-1">
             {provider.description}
           </p>
+
+          {/* Data points tracked */}
+          {dataPoints.length > 0 && (
+            <div>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+                Tracks
+              </p>
+              <div className="flex gap-1 flex-wrap">
+                {dataPoints.slice(0, 4).map((point) => (
+                  <span
+                    key={point}
+                    className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-medium rounded border border-indigo-100"
+                  >
+                    {point}
+                  </span>
+                ))}
+                {dataPoints.length > 4 && (
+                  <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-400 text-[10px] rounded border border-indigo-100">
+                    +{dataPoints.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Module tags */}
           <div className="flex gap-1 flex-wrap">
@@ -181,7 +209,6 @@ export function IntegrationCard({
             )}
           </div>
         </div>
-        {/* end inner p-5 wrapper */}
       </div>
 
       {showGuide && (

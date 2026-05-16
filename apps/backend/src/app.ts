@@ -32,6 +32,11 @@ export function createApp(): express.Application {
       credentials: true,
     }),
   );
+  // Allow OAuth popup windows to post messages back to the opener
+  app.use((_req, res, next) => {
+    res.setHeader("Cross-Origin-Opener-Policy", "unsafe-none");
+    next();
+  });
   // 8 MB — allows base64-encoded PDFs up to 5 MB in size
   app.use(express.json({ limit: "8mb" }));
 

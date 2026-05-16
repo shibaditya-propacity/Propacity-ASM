@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { ProviderWithStatus } from "../types";
 import { IntegrationCard } from "./integration-card";
 import { ConnectModal } from "./connect-modal";
+import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 import { CategoryTabs } from "./category-tabs";
 import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 
@@ -12,9 +13,17 @@ interface IntegrationGridProps {
 
 export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
   const [activeCategory, setActiveCategory] = useState("All");
-  const [connecting, setConnecting] = useState<ProviderWithStatus | null>(null);
-  const [detailProvider, setDetailProvider] =
-    useState<ProviderWithStatus | null>(null);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
+
+  // Always resolve from live `providers` so mutations (account-label save,
+  // sync, disconnect) reflect immediately without stale closure state.
+  const connectingProvider = connectingId
+    ? (providers.find((p) => p.id === connectingId) ?? null)
+    : null;
+  const viewingProvider = viewingId
+    ? (providers.find((p) => p.id === viewingId) ?? null)
+    : null;
 
   const categories = [...new Set(providers.map((p) => p.category))].sort();
 
@@ -44,18 +53,26 @@ export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
               key={provider.id}
               clientId={clientId}
               provider={provider}
-              onConnect={setConnecting}
-              onDetails={setDetailProvider}
+              onConnect={(p) => setConnectingId(p.id)}
+              onView={(p) => setViewingId(p.id)}
             />
           ))}
         </div>
       )}
 
-      {connecting && (
+      {connectingProvider && (
         <ConnectModal
           clientId={clientId}
-          provider={connecting}
-          onClose={() => setConnecting(null)}
+          provider={connectingProvider}
+          onClose={() => setConnectingId(null)}
+        />
+      )}
+
+      {viewingProvider?.integration && (
+        <IntegrationDetailDrawer
+          clientId={clientId}
+          provider={viewingProvider}
+          onClose={() => setViewingId(null)}
         />
       )}
 
