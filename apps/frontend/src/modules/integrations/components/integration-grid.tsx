@@ -4,7 +4,6 @@ import { IntegrationCard } from "./integration-card";
 import { ConnectModal } from "./connect-modal";
 import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 import { CategoryTabs } from "./category-tabs";
-import { IntegrationDetailDrawer } from "./integration-detail-drawer";
 
 interface IntegrationGridProps {
   clientId: string;
@@ -73,14 +72,6 @@ export function IntegrationGrid({ clientId, providers }: IntegrationGridProps) {
           clientId={clientId}
           provider={viewingProvider}
           onClose={() => setViewingId(null)}
-        />
-      )}
-
-      {detailProvider && (
-        <IntegrationDetailDrawer
-          clientId={clientId}
-          provider={detailProvider}
-          onClose={() => setDetailProvider(null)}
         />
       )}
     </div>

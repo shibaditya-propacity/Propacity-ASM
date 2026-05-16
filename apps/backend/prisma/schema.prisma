@@ -31,6 +31,8 @@ model Tenant {
   seoSnapshots       SeoSnapshot[]
   seoKeywords        SeoKeyword[]
   seoActions         SeoAction[]
+  socialProfiles     SocialProfile[]
+  socialSnapshots    SocialSnapshot[]
 }
 
 model User {
@@ -285,10 +287,11 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  integrations Integration[]
-  seoSnapshots SeoSnapshot[]
-  seoKeywords  SeoKeyword[]
-  seoActions   SeoAction[]
+  integrations   Integration[]
+  seoSnapshots   SeoSnapshot[]
+  seoKeywords    SeoKeyword[]
+  seoActions     SeoAction[]
+  socialProfiles SocialProfile[]
 
   @@index([tenantId, createdAt])
   @@map("int_clients")
@@ -438,4 +441,68 @@ model SeoAction {
   @@index([tenantId, clientId, status])
   @@index([tenantId, clientId, createdAt])
   @@map("seo_actions")
+}
+
+// =============================================================
+// MODULE: SOCIAL MEDIA
+// =============================================================
+
+enum SocialPlatform {
+  INSTAGRAM
+  FACEBOOK
+  LINKEDIN
+  YOUTUBE
+}
+
+// Per-client social media handle + connection state, one row per platform.
+model SocialProfile {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  platform    SocialPlatform
+  handle      String         // username / page slug / channel ID
+  profileUrl  String?
+  autoFetched Boolean        @default(false) // true if handle was discovered automatically
+  isConnected Boolean        @default(false)
+  accessToken String?        // encrypted; null when we use server-side API key
+  tokenExpiry DateTime?
+  lastSyncAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  snapshots SocialSnapshot[]
+
+  @@unique([clientId, platform])
+  @@index([tenantId, clientId])
+  @@index([tenantId, platform])
+  @@map("social_profiles")
+}
+
+// Point-in-time metrics snapshot for a single platform.
+model SocialSnapshot {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  socialProfileId String
+  socialProfile   SocialProfile @relation(fields: [socialProfileId], references: [id], onDelete: Cascade)
+  snapshotDate    DateTime      @default(now())
+  followers       Int           @default(0)
+  following       Int?
+  posts           Int?
+  avgLikes        Float?
+  avgComments     Float?
+  avgShares       Float?
+  engagementRate  Float?
+  reach           Int?
+  impressions     Int?
+  profileViews    Int?
+  topPosts        Json          @default("[]") // [{ url, likes, comments, shares, date }]
+  audienceDemog   Json?         // { age: [], gender: [], location: [] }
+  createdAt       DateTime      @default(now())
+
+  @@index([socialProfileId, snapshotDate])
+  @@index([tenantId, snapshotDate])
+  @@map("social_snapshots")
 }

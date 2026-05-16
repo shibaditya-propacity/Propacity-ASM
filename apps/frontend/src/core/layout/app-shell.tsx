@@ -9,6 +9,7 @@ import {
   CalendarPlus,
   Plug,
   Search,
+  Share2,
   X,
   LogOut,
   ChevronLeft,
@@ -47,6 +48,12 @@ const NAV_LINKS = [
     label: "SEO",
     end: false,
     Icon: Search,
+  },
+  {
+    to: "/social",
+    label: "Social Media",
+    end: false,
+    Icon: Share2,
   },
 ] as const;
 
